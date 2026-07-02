@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fb4aac2b434249089dd264e6f5574fc, type: 3}
+  m_Name: BallPoolConfig
+  m_EditorClassIdentifier: Game.Core::Game.Core.Pool.PoolConfiguration
+  poolName: Ball_Normal
+  prefab: {fileID: 4916180330167970204, guid: 9dda5c9e123c5413ea642d53348f0226, type: 3}
+  collectionCheck: 0
+  defaultCapacity: 10
+  maxCapacity: 30

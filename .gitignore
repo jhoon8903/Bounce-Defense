@@ -1,0 +1,51 @@
+# ── Unity 생성물 (재생성 가능, 커밋 금지) ────────────────
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# 에셋 .meta 는 반드시 커밋되어야 함 (위 폴더가 아닌 한)
+!/[Aa]ssets/**/*.meta
+
+# ── 자동 생성 IDE/프로젝트 파일 (Unity 가 매번 재생성) ────
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# ── IDE / 에디터 ─────────────────────────────────────────
+.vs/
+.idea/
+.vscode/
+.gradle/
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# ── 빌드 산출물 (제출은 별도 압축, 저장소엔 미포함) ───────
+*.apk
+*.aab
+*.app
+*.unitypackage
+
+# ── 프로젝트 로컬 디버그 로그 ────────────────────────────
+sysinfo.txt
+SpikeLog.txt
+crashlytics-build.properties
