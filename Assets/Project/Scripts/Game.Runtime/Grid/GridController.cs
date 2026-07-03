@@ -1,0 +1,152 @@
+using System.Collections.Generic;
+using Game.Combat;
+using Game.Core.Mvc;
+using UnityEngine;
+
+namespace Game.Runtime.Grid
+{
+    // 배치 권한(placement authority). BallController를 그대로 미러링:
+    //  - 생성자 = 순수 DI(엔진 작업 없음), OnInitialize에서 엔진 세팅.
+    //  - 핸들 키 병렬 딕셔너리(placement / occupant) + 재사용 버퍼.
+    // 그리드 코어에는 적/HP/웨이브 로직 없음. 블록/적은 나중에 셀에 꽂힌다(occupant = IDamageable 브리지).
+    //
+    // Phase-2 강하(descent) 훅: 생성자에 IClock 추가 + OnInitialize에서 _clock.OnFixedTick += ...,
+    // OnFixedTick에서 블록 하강(월드 Y) + 행 경계 넘을 때 Remove→Place 재등록. 코어에는 자체 tick 없음.
+    public sealed class GridController : BaseController
+    {
+        private static readonly Vector2 DefaultOrigin = new(0f, 1.27f);
+
+        private readonly GridConfig _config;
+
+        private readonly Dictionary<int, BlockPlacement> _placements = new();
+        private readonly Dictionary<int, IDamageable> _occupants = new();
+        private readonly List<int> _handleBuffer = new();
+
+        private GridModel _model;
+        private Vector2 _origin = DefaultOrigin;
+        private int _nextHandle = 1; // 0 = 빈칸 예약
+
+        public GridController(GridConfig config)
+        {
+            _config = config;
+        }
+
+        public bool IsReady => _model != null && _model.IsInitialized;
+        public int ActiveBlockCount => _placements.Count;
+        public int Cols => _model != null ? _model.Cols : (_config != null ? _config.Cols : 9);
+        public int Rows => _model != null ? _model.Rows : (_config != null ? _config.Rows : 13);
+        public float CellSize => _model != null ? _model.CellSize : (_config != null ? _config.CellSize : 1f);
+        public Vector2 Origin => _origin;
+        public GridModel Model => _model;
+
+        // 앵커 원점(씬 'Grid' 빈 오브젝트 월드 좌표) 주입. Initialize 전에 호출 — BallController.SetCollectTarget 미러.
+        public void SetOrigin(Vector2 origin) => _origin = origin;
+
+        protected override void OnInitialize()
+        {
+            int cols = _config != null ? _config.Cols : 9;
+            int rows = _config != null ? _config.Rows : 13;
+            float cell = _config != null ? _config.CellSize : 1f;
+            _model = new GridModel();
+            _model.Initialize(cols, rows, cell, _origin);
+        }
+
+        protected override void OnReset() => Clear();
+        protected override void OnDispose() => Clear();
+        protected override void OnTick(float deltaTime) { }
+        protected override void OnFixedTick(float fixedDeltaTime) { }
+
+        // ---- 배치 API ----
+
+        // 지정 앵커에 배치. 경계 밖/겹침이면 false(리젝트). occupant는 선택(그리드 코어는 null 허용).
+        public bool TryPlaceBlock(CellCoord anchor, Footprint footprint, out BlockPlacement placement, IDamageable occupant = null)
+        {
+            placement = default;
+            if (!IsReady) return false;
+            if (!_model.CanPlace(anchor, footprint)) return false;
+
+            int handle = _nextHandle++;
+            if (!_model.Place(handle, anchor, footprint)) return false;
+
+            Vector2 center = _model.FootprintWorldCenter(anchor, footprint);
+            Vector2 size = _model.FootprintWorldSize(footprint);
+            placement = new BlockPlacement(handle, anchor, footprint, center, size);
+            _placements[handle] = placement;
+            if (occupant != null) _occupants[handle] = occupant;
+            return true;
+        }
+
+        // 상단 우선 빈 자리 탐색 후 배치(스포너용). 자리 없으면 false.
+        public bool TrySpawnTop(Footprint footprint, out BlockPlacement placement, IDamageable occupant = null)
+        {
+            placement = default;
+            if (!IsReady) return false;
+            if (!_model.TryFindFreeAnchor(footprint, out CellCoord anchor)) return false;
+            return TryPlaceBlock(anchor, footprint, out placement, occupant);
+        }
+
+        public void RemoveBlock(int handle)
+        {
+            _model?.Remove(handle);
+            _placements.Remove(handle);
+            _occupants.Remove(handle);
+        }
+
+        public void Clear()
+        {
+            _model?.Clear();
+            _placements.Clear();
+            _occupants.Clear();
+            _nextHandle = 1;
+        }
+
+        // ---- 기하 패스스루 ----
+        public Vector2 CellToWorld(int col, int row) => _model != null ? _model.CellToWorld(col, row) : default;
+        public Vector2 CellToWorld(CellCoord cell) => CellToWorld(cell.Col, cell.Row);
+
+        // 월드 -> 셀. 보드 밖이면 false(cell은 계산값 그대로).
+        public bool WorldToCell(Vector2 world, out CellCoord cell)
+        {
+            cell = default;
+            if (_model == null) return false;
+            cell = _model.WorldToCell(world);
+            return _model.InBounds(cell);
+        }
+
+        // 레이저 편의: 월드 -> 행 인덱스(보드 범위로 클램프).
+        public int WorldToRow(Vector2 world)
+        {
+            if (_model == null) return 0;
+            CellCoord c = _model.WorldToCell(world);
+            return Mathf.Clamp(c.Row, 0, _model.Rows - 1);
+        }
+
+        // ---- 점유 / 레이저 조회 ----
+        public bool IsCellOccupied(int col, int row) => _model != null && _model.OccupantHandleAt(col, row) != GridMap.Empty;
+        public int OccupantHandleAt(int col, int row) => _model != null ? _model.OccupantHandleAt(col, row) : GridMap.Empty;
+
+        // 한 행에 겹치는 서로 다른 occupant, 열 오름차순(결정적/시드 재현). 멀티셀 블록은 겹치는 모든 행에 등장. 레이저용.
+        public int OccupantsInRow(int row, List<IDamageable> buffer)
+        {
+            buffer.Clear();
+            if (_model == null) return 0;
+            _model.OccupantsInRow(row, _handleBuffer);
+            for (int i = 0; i < _handleBuffer.Count; i++)
+                if (_occupants.TryGetValue(_handleBuffer[i], out IDamageable occ) && occ != null)
+                    buffer.Add(occ);
+            return buffer.Count;
+        }
+
+        public void RowsOf(int handle, List<int> buffer) => _model?.RowsOf(handle, buffer);
+        public bool TryGetPlacement(int handle, out BlockPlacement placement) => _placements.TryGetValue(handle, out placement);
+        public bool TryGetOccupant(int handle, out IDamageable occupant) => _occupants.TryGetValue(handle, out occupant);
+
+        public bool TryGetHandleOf(IDamageable occupant, out int handle)
+        {
+            foreach (KeyValuePair<int, IDamageable> kv in _occupants)
+                if (ReferenceEquals(kv.Value, occupant)) { handle = kv.Key; return true; }
+            handle = GridMap.Empty;
+            return false;
+        }
+    }
+}

@@ -398,8 +398,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1800077224}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &234584451
@@ -427,9 +426,23 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a2214defdc1384c949441970e7265354, type: 2}
   - {fileID: 11400000, guid: 3ad4d84a22df14083acc425bccf35eaa, type: 2}
   poolRoot: {fileID: 1977317806}
-  launchController: {fileID: 1800077225}
+  launchController: {fileID: 548187059}
   enemies:
   - {fileID: 0}
+  gridConfig: {fileID: 0}
+  gridAnchor: {fileID: 1556205111}
+  gridDebugView: {fileID: 1556205112}
+--- !u!114 &408277711 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1013123045952868188, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+  m_PrefabInstance: {fileID: 548187051}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b66cf06ff5e4eeaace2752e92287b72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Project.Scripts.Game.Objects.Char.AnchorView
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,8 +633,37 @@ PrefabInstance:
       propertyPath: m_Name
       value: Char
       objectReference: {fileID: 0}
+    - target: {fileID: 4468787211236063955, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: dotSize
+      value: 0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 4468787211236063955, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: dotColor.a
+      value: 0.3254902
+      objectReference: {fileID: 0}
+    - target: {fileID: 4468787211236063955, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: dotSpacing
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4468787211236063955, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: launchController
+      value: 
+      objectReference: {fileID: 548187059}
+    - target: {fileID: 4775201333389430967, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: worldCamera
+      value: 
+      objectReference: {fileID: 519420031}
+    - target: {fileID: 6198974288940389649, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: anchorView
+      value: 
+      objectReference: {fileID: 408277711}
+    - target: {fileID: 6198974288940389649, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: launchController
+      value: 
+      objectReference: {fileID: 548187059}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 129114602426776720, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
@@ -630,6 +672,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 542082925133767302, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
   m_PrefabInstance: {fileID: 548187051}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &548187059 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 739558544093698295, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+  m_PrefabInstance: {fileID: 548187051}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ee20a9d694fe41c8bf521c9c14cbe15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.LaunchController
 --- !u!1 &1091291561
 GameObject:
   m_ObjectHideFlags: 0
@@ -874,6 +927,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1556205111}
+  - component: {fileID: 1556205112}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -896,55 +950,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 155191656}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1800077223
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1800077224}
-  - component: {fileID: 1800077225}
-  m_Layer: 0
-  m_Name: LaunchController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1800077224
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1800077223}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 234584450}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1800077225
+--- !u!114 &1556205112
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1800077223}
+  m_GameObject: {fileID: 1556205110}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3ee20a9d694fe41c8bf521c9c14cbe15, type: 3}
+  m_Script: {fileID: 11500000, guid: 1d2e106760e59446c98e7294b069ad6a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.LaunchController
-  ballCount: 8
-  launchOrigin: {fileID: 0}
-  autoLaunchOnPlay: 0
-  autoLaunchDelay: 0.5
-  autoLaunchDirection: {x: 0, y: 1}
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Grid.GridDebugView
+  cols: 9
+  rows: 13
+  cellSize: 1
+  drawGrid: 1
+  drawOccupancy: 1
+  lineColor: {r: 1, g: 1, b: 1, a: 0.25}
+  occupiedColor: {r: 1, g: 0.35, b: 0.2, a: 0.45}
 --- !u!1 &1977317805
 GameObject:
   m_ObjectHideFlags: 0
