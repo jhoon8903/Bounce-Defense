@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Mvc;
+using Game.Events;
 using Game.Runtime.Motor;
 using UnityEngine;
 
@@ -10,9 +11,8 @@ namespace Game.Runtime.Combat
     public sealed class BallController : BaseController
     {
         private const int MaxBounces = 40;
-        // 바닥(아레나 하단 벽) 반사의 노멀은 위(+y)를 향한다. 이 임계 이상이면 바닥으로 판정.
         // 실시간 연속 모델: 좌·우·천장 벽은 정상 반사, 바닥에 닿으면 반사 대신 Char(고정 원점)로 수집.
-        private const float FloorNormalThreshold = 0.7f;
+        // 바닥/비바닥 판정은 모터가 손실 없이 result.HitFloor/HitNonFloorWall로 넘겨준다(코너 다중바운스 안전).
         // 수집 도착 판정 거리(이 안쪽이면 Char에 닿은 것으로 보고 소멸).
         private const float CollectArrivalDist = 0.15f;
         private static readonly Vector2 OutOfBoundsMin = new(-6f, -11f);
@@ -26,6 +26,8 @@ namespace Game.Runtime.Combat
         private readonly IBallFactory _factory;
         private readonly IClock _clock;
         private readonly BallConfig _config;
+        private readonly DamageResolver _resolver;
+        private readonly CombatEventHub _hub;
         private readonly Dictionary<string, BallModel> _models = new();
         private readonly Dictionary<string, BallView> _views = new();
         private readonly Dictionary<string, IBallMotor> _motors = new();
@@ -63,11 +65,13 @@ namespace Game.Runtime.Combat
 
         public void StopFiring() => _firing = false;
 
-        public BallController(IBallFactory factory, IClock clock, BallConfig config)
+        public BallController(IBallFactory factory, IClock clock, BallConfig config, DamageResolver resolver, CombatEventHub hub)
         {
             _factory = factory;
             _clock = clock;
             _config = config;
+            _resolver = resolver;
+            _hub = hub;
         }
 
         protected override void OnInitialize()
@@ -115,9 +119,14 @@ namespace Game.Runtime.Combat
                 model.SetPosition(motor.Position);
                 if (result.BounceCountThisStep > 0) model.RegisterBounce(result.BounceCountThisStep);
 
-                // 바닥에 닿으면 반사 대신 수집 상태로 전환(Char로 귀환). 좌·우·천장은 정상 반사.
-                bool hitFloor = result.HitWall && result.HitNormal.y >= FloorNormalThreshold;
-                if (hitFloor) { _collecting.Add(id); continue; }
+                // 볼→데미지: 이번 스텝의 모든 적/블록 접촉에 데미지 파이프라인 실행(모터가 콜라이더 dedup).
+                // 바닥 수집으로 continue하기 전에 처리 — 같은 스텝에 적+바닥을 맞아도 데미지는 살린다.
+                ResolveDamageHits(id, model, motor);
+
+                // 바닥면 반사면 반사 대신 수집(Char로 귀환) — 손실 없는 result.HitFloor 사용(코너 다중바운스에도 정확).
+                // 비바닥 벽(좌·우·천장) 반사는 독립적으로 이벤트 발화. 한 스텝에 둘 다 일어나도 각각 정확히 처리.
+                if (result.HitNonFloorWall) RaiseWallBounce(id, model, result.WallBouncePoint, result.WallBounceNormal);
+                if (result.HitFloor) { _collecting.Add(id); continue; }
                 if (IsOutOfBounds(motor.Position) || model.BounceCount >= MaxBounces) Release(id);
             }
         }
@@ -157,7 +166,51 @@ namespace Game.Runtime.Combat
             _models[id] = model;
             _views[id] = view;
             _motors[id] = motor;
+            // 발사 이벤트(주스/스킬 훅용). 현재 구독자 없어도 파이프라인 완결성 위해 발화.
+            _hub?.RaiseLaunch(new BallLaunchInfo(BallSourceType.Normal, origin, direction));
             return model;
+        }
+
+        // 이번 스텝의 적/블록 접촉마다 데미지 파이프라인 실행 + OnHit 발화. 벽/바닥은 대상 아님.
+        private void ResolveDamageHits(string id, BallModel model, IBallMotor motor)
+        {
+            if (_resolver == null) return;
+            IReadOnlyList<MotorHit> hits = motor.LastStepHits;
+            if (hits == null || hits.Count == 0) return;
+
+            // 단일 반올림: 스폰 시 미리 반올림하지 않고, 원본 float 데미지를 파이프라인 끝(RoundDamageStage)에서 한 번만 반올림.
+            float baseDamage = _config != null ? _config.GetDamage(1) : 0f;
+            int ballInstanceId = _views.TryGetValue(id, out BallView view) && view != null ? view.GetInstanceID() : 0;
+
+            for (int i = 0; i < hits.Count; i++)
+            {
+                MotorHit hit = hits[i];
+                if (hit.Collider == null) continue;
+                IDamageable target = hit.Collider.GetComponentInParent<IDamageable>();
+                if (target == null) continue; // IDamageable 없는 대상(예: 브리지 미배선 블록) — 안전 무시.
+
+                HitContext ctx = new HitContext(
+                    DamageType.Direct,
+                    model.SourceType,
+                    target,
+                    baseDamage,
+                    canCrit: true,
+                    canReceiveGlobalModifiers: true,
+                    hitPosition: hit.Point,
+                    hitNormal: hit.Normal,
+                    sourceBallInstanceId: ballInstanceId);
+
+                _resolver.Resolve(ctx);   // Base→Additive→Crit→Round→ApplyDamage(대상 HP 감소, 사망 시 RaiseKill).
+                _hub?.RaiseHit(ctx);      // OnHit 구독자(주스/스킬 훅)에 알림.
+            }
+        }
+
+        // 비바닥 벽(좌·우·천장) 반사 이벤트. point/normal은 모터가 캡처한 비바닥 벽 접촉값. 현재 구독자 없어도 완결성 위해 발화.
+        private void RaiseWallBounce(string id, BallModel model, Vector2 point, Vector2 normal)
+        {
+            if (_hub == null) return;
+            int ballInstanceId = _views.TryGetValue(id, out BallView view) && view != null ? view.GetInstanceID() : 0;
+            _hub.RaiseWallBounce(new BallWallBounceInfo(ballInstanceId, model.SourceType, point, normal));
         }
 
         public void Release(string id)

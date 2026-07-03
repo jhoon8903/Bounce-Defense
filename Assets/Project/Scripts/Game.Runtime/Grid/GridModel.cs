@@ -36,6 +36,8 @@ namespace Game.Runtime.Grid
 
         // ---- 점유 조회 (순수) ----
         public bool CanPlace(CellCoord anchor, Footprint fp) => _map != null && _map.CanPlace(anchor, fp);
+        // 하강 재등록용: ignoreHandle(자기 자신) 겹침 허용 점유 조회.
+        public bool CanPlace(CellCoord anchor, Footprint fp, int ignoreHandle) => _map != null && _map.CanPlace(anchor, fp, ignoreHandle);
         public bool TryFindFreeAnchor(Footprint fp, out CellCoord anchor)
         {
             if (_map != null) return _map.TryFindFreeAnchor(fp, out anchor);

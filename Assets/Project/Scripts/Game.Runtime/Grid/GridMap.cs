@@ -44,6 +44,19 @@ namespace Game.Runtime.Grid
             return true;
         }
 
+        // 경계 안 + 모든 셀이 빈칸이거나 ignoreHandle 소유. 하강 재등록에서 자기 자신과 겹치는 셀은 무시(핸들 churn 없이 점유 조회).
+        public bool CanPlace(CellCoord anchor, Footprint fp, int ignoreHandle)
+        {
+            if (!FitsFootprint(anchor, fp)) return false;
+            for (int dy = 0; dy < fp.Height; dy++)
+                for (int dx = 0; dx < fp.Width; dx++)
+                {
+                    int h = _cells[Index(anchor.Col + dx, anchor.Row + dy)];
+                    if (h != Empty && h != ignoreHandle) return false;
+                }
+            return true;
+        }
+
         // 배치 성공 시 true. 경계 밖/겹침이면 아무것도 안 쓰고 false(리젝트, 클램프 없음).
         public bool Place(int handle, CellCoord anchor, Footprint fp)
         {

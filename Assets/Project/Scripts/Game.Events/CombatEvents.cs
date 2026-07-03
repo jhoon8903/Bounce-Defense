@@ -44,4 +44,17 @@ namespace Game.Events
             KillingHit = killingHit;
         }
     }
+
+    // 적이 하단 방어선에 도달(=베이스 침범). 웨이브 진행상 킬처럼 '해소'로 집계 + 베이스 HP 감소.
+    public readonly struct EnemyBreachInfo
+    {
+        public readonly int BreachDamage;
+        public readonly Vector2 Position;
+
+        public EnemyBreachInfo(int breachDamage, Vector2 position)
+        {
+            BreachDamage = breachDamage;
+            Position = position;
+        }
+    }
 }

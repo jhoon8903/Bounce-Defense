@@ -8,6 +8,8 @@ namespace Game.Runtime.Motor
         private const int MaxIterationsPerStep = 8;
         private const float SkinWidth = 0.01f;
         private const float MinRemaining = 0.0001f;
+        // 아레나는 축정렬 박스 → 바닥면 반사 노멀은 정확히 (0,+1). 옆면(±1,0)·천장(0,-1)과 이 값으로 명확히 구분된다.
+        private const float FloorFaceNormalY = 0.5f;
         private Vector2 _position;
         private Vector2 _velocity;
         private float _speed;
@@ -18,10 +20,13 @@ namespace Game.Runtime.Motor
         private LayerMask _passThroughMask;
         private LayerMask _castMask;
         private readonly HashSet<Collider2D> _ignoredThisStep = new();
+        // 이번 Step에서 맞은 적/블록 접촉(재사용 버퍼, 할당 없음). Step 시작에 Clear.
+        private readonly List<MotorHit> _stepHits = new();
 
         public Vector2 Position => _position;
         public Vector2 Velocity => _velocity;
         public float Speed => _speed;
+        public IReadOnlyList<MotorHit> LastStepHits => _stepHits;
 
         public void Init(Vector2 position, Vector2 direction, float speed, float radius,
             LayerMask wallMask, LayerMask enemyMask, LayerMask blockMask, LayerMask passThroughMask)
@@ -43,6 +48,7 @@ namespace Game.Runtime.Motor
             float remaining = _speed * deltaTime;
             int iterations = 0;
             _ignoredThisStep.Clear();
+            _stepHits.Clear();
             Collider2D arena = _wallMask.value != 0 ? Physics2D.OverlapPoint(_position, _wallMask) : null;
             bool hasArena = arena != null;
             while (remaining > MinRemaining && iterations < MaxIterationsPerStep)
@@ -86,6 +92,17 @@ namespace Game.Runtime.Motor
                     result.HitPoint = _position;
                     result.HitNormal = wallNormal;
                     result.HitCollider = arena;
+                    // 손실 없는 바닥/비바닥 분류(순서 무관 sticky). 바닥면(노멀 +y)만 HitFloor, 나머지 벽은 이벤트용으로 캡처.
+                    if (wallNormal.y >= FloorFaceNormalY)
+                    {
+                        result.HitFloor = true;
+                    }
+                    else
+                    {
+                        result.HitNonFloorWall = true;
+                        result.WallBounceNormal = wallNormal;
+                        result.WallBouncePoint = _position;
+                    }
                     continue;
                 }
                 RaycastHit2D hit = chosen.Value;
@@ -100,22 +117,41 @@ namespace Game.Runtime.Motor
                 if (isPassThrough)
                 {
                     result.PassedThrough = true;
-                    if ((hitLayerBit & _blockMask.value) != 0) result.HitBlock = true;
+                    bool passIsBlock = (hitLayerBit & _blockMask.value) != 0;
+                    if (passIsBlock) result.HitBlock = true;
                     else result.HitEnemy = true;
+                    AddDamageHit(hit.collider, hit.point, hit.normal, passIsBlock);
                     _ignoredThisStep.Add(hit.collider);
                     continue;
                 }
                 _velocity = Vector2.Reflect(_velocity, hit.normal).normalized * _speed;
                 _position += hit.normal * SkinWidth;
                 result.BounceCountThisStep++;
-                if ((hitLayerBit & _wallMask.value) != 0) result.HitWall = true;
-                else if ((hitLayerBit & _blockMask.value) != 0) result.HitBlock = true;
-                else result.HitEnemy = true;
+                if ((hitLayerBit & _wallMask.value) != 0)
+                {
+                    result.HitWall = true;
+                }
+                else
+                {
+                    bool reflectIsBlock = (hitLayerBit & _blockMask.value) != 0;
+                    if (reflectIsBlock) result.HitBlock = true;
+                    else result.HitEnemy = true;
+                    AddDamageHit(hit.collider, hit.point, hit.normal, reflectIsBlock);
+                }
             }
             if (iterations < MaxIterationsPerStep || !(remaining > MinRemaining)) return result;
             result.StuckAborted = true;
             _velocity = Quaternion.Euler(0, 0, 1.5f) * _velocity;
             return result;
+        }
+
+        // 이번 Step의 데미지 히트 기록. 같은 콜라이더는 한 번만(1접촉=1히트). 목록이 작아 선형 스캔으로 충분.
+        private void AddDamageHit(Collider2D collider, Vector2 point, Vector2 normal, bool isBlock)
+        {
+            if (collider == null) return;
+            for (int i = 0; i < _stepHits.Count; i++)
+                if (_stepHits[i].Collider == collider) return;
+            _stepHits.Add(new MotorHit(collider, point, normal, isBlock));
         }
     }
 }
