@@ -1,7 +1,3 @@
-using System.Collections;
-using Game.Combat;
-using Game.Core.Pool;
-using Game.Events;
 using UnityEngine;
 using VContainer;
 
@@ -9,57 +5,30 @@ namespace Game.Runtime.Combat
 {
     public sealed class LaunchController : MonoBehaviour
     {
-        [SerializeField] private int ballCount = 8;
-        [SerializeField] private float staggerSeconds = 0.08f;
-        [SerializeField] private float ballSpeed = 12f;
-        [SerializeField] private int normalBallDamage = 8;
+        [SerializeField] private int ballCount = 5;
+        [SerializeField] private Transform launchOrigin;
 
-        [Header("MCP 자동 검증용 (드래그 입력 시뮬레이션 불가 우회 — Phase0 SpikeLog 교훈)")]
+        [Header("MCP 자동 검증용 (드래그 입력 시뮬레이션 불가 우회)")]
         [SerializeField] private bool autoLaunchOnPlay;
         [SerializeField] private float autoLaunchDelay = 0.5f;
-        [SerializeField] private float autoLaunchAngleDeg = 90f;
-        [SerializeField] private Transform autoLaunchOrigin;
+        [SerializeField] private Vector2 autoLaunchDirection = Vector2.up;
 
-        private IPool _pool;
-        private DamageResolver _resolver;
-        private CombatEventHub _hub;
+        private BallController _ballController;
 
         [Inject]
-        public void Construct(IPool pool, DamageResolver resolver, CombatEventHub hub)
-        {
-            _pool = pool;
-            _resolver = resolver;
-            _hub = hub;
-        }
+        public void Construct(BallController ballController) => _ballController = ballController;
 
         private void Start()
         {
-            if (autoLaunchOnPlay) StartCoroutine(AutoLaunchAfterDelay());
+            if (autoLaunchOnPlay) Invoke(nameof(AutoLaunch), autoLaunchDelay);
         }
 
-        private IEnumerator AutoLaunchAfterDelay()
+        private void AutoLaunch()
         {
-            yield return new WaitForSeconds(autoLaunchDelay);
-            float rad = autoLaunchAngleDeg * Mathf.Deg2Rad;
-            Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
-            Vector2 origin = autoLaunchOrigin ? autoLaunchOrigin.position : Vector2.zero;
-            Launch(origin, dir);
+            Vector2 origin = launchOrigin ? (Vector2)launchOrigin.position : Vector2.zero;
+            Launch(origin, autoLaunchDirection);
         }
 
-        public void Launch(Vector2 origin, Vector2 direction) => StartCoroutine(StaggeredLaunch(origin, direction));
-
-        private IEnumerator StaggeredLaunch(Vector2 origin, Vector2 direction)
-        {
-            for (int i = 0; i < ballCount; i++)
-            {
-                Ball ball = _pool.Get<Ball>();
-                if (ball != null)
-                {
-                    ball.Configure(_resolver, _hub, _pool);
-                    ball.Launch(origin, direction, ballSpeed, normalBallDamage, BallSourceType.Normal);
-                }
-                yield return new WaitForSeconds(staggerSeconds);
-            }
-        }
+        public void Launch(Vector2 origin, Vector2 direction) => _ballController?.FireVolley(origin, direction, ballCount);
     }
 }

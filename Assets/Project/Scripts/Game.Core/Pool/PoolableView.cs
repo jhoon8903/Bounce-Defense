@@ -6,5 +6,6 @@ namespace Game.Core.Pool
     {
         public virtual void OnActive() { }
         public virtual void OnInactive() { }
+        protected virtual void OnDestroy() { }
     }
 }

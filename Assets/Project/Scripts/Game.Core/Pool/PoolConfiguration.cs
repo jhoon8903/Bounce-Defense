@@ -29,6 +29,7 @@ namespace Game.Core.Pool
                 Verbose.E($"[PoolConfiguration] Prefab is null `{poolName}`");
                 return null;
             }
+            
             if (prefab.TryGetComponent(out PoolableView poolableView)) return poolableView.GetType();
             Verbose.E($"[PoolConfiguration] Prefab '{prefab.name}' does not have PoolableView component");
             return null;

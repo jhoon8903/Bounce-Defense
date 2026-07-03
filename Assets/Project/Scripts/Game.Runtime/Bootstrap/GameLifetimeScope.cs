@@ -31,6 +31,17 @@ namespace Game.Runtime.Bootstrap
             builder.Register<ModifierRegistry>(Lifetime.Singleton);
             builder.Register<DamageResolver>(Lifetime.Singleton);
             builder.Register<CombatEventHub>(Lifetime.Singleton);
+            BallConfig ballConfig = null;
+            if (poolConfigs != null)
+            {
+                for (int i = 0; i < poolConfigs.Length; i++)
+                {
+                    if (poolConfigs[i] is BallConfig bc) { ballConfig = bc; break; }
+                }
+            }
+            builder.RegisterInstance(ballConfig != null ? ballConfig : ScriptableObject.CreateInstance<BallConfig>());
+            builder.Register<IBallFactory, BallFactory>(Lifetime.Singleton);
+            builder.Register<BallController>(Lifetime.Singleton);
             if (launchController) builder.RegisterComponent(launchController);
             for (int i = 0; i < enemies.Length; i++)
             {
@@ -40,7 +51,8 @@ namespace Game.Runtime.Bootstrap
             builder.RegisterBuildCallback(container =>
             {
                 IPool pool = container.Resolve<IPool>();
-                pool.Activate(poolRoot ? poolRoot : transform, typeof(Ball));
+                pool.Activate(poolRoot ? poolRoot : transform, typeof(BallView));
+                container.Resolve<BallController>().Initialize();
             });
         }
     }

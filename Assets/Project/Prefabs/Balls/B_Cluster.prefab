@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 8171205433281670094}
   - component: {fileID: 9139229373294528292}
-  - component: {fileID: 2491081296360547898}
+  - component: {fileID: 16884132157663075}
   m_Layer: 0
-  m_Name: Ball_Cluster
+  m_Name: B_Cluster
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -92,7 +92,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &2491081296360547898
+--- !u!114 &16884132157663075
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -101,20 +101,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 7515519889510551241}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50f0daf7eed6e401db5f09003af3555f, type: 3}
+  m_Script: {fileID: 11500000, guid: 5b42a4fd1249341878d013495e03e839, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Game.Runtime::Game.Runtime.Combat.Ball
-  radius: 0.15
-  lifetime: 8
-  maxBounces: 40
-  wallMask:
-    serializedVersion: 2
-    m_Bits: 256
-  enemyMask:
-    serializedVersion: 2
-    m_Bits: 512
-  blockMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  outOfBoundsMin: {x: -6, y: -11}
-  outOfBoundsMax: {x: 6, y: 11}
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallView
