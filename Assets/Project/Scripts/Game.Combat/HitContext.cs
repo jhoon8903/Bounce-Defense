@@ -15,6 +15,8 @@ namespace Game.Combat
         public bool CanReceiveGlobalModifiers;
         public Vector2 HitNormal; // 전/후면 크리 판정용(단검 패시브). 미사용 시 default.
         public int SourceBallId;  // "같은 볼" 판정(Magic Mirror 등). 미지정 0.
+        // 이 히트에만 붙는 소비형 가산%(Magic Mirror 무장 소비). 레지스트리 합산에 더해져 단일 곱(§185). 기본 0.
+        public float BonusAdditivePercent;
 
         // 리졸버가 채우는 작업 필드.
         public bool IsCrit;

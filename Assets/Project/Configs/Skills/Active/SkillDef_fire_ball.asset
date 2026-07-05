@@ -23,3 +23,18 @@ MonoBehaviour:
   - "\uD654\uC0C1 4.5\uCD08\xB7\uCD5C\uB3004\uC911\uCCA9\xB7\uCD08\uB2F910"
   - "\uD654\uC0C1 5\uCD08\xB7\uCD5C\uB3005\uC911\uCCA9\xB7\uCD08\uB2F912"
   ballDamagePerLevel: 15000000180000001b000000
+  burn:
+    durationPerLevel:
+    - 4
+    - 4.5
+    - 5
+    dpsPerLevel:
+    - 8
+    - 10
+    - 12
+    maxStacksPerLevel: 030000000400000005000000
+  freeze:
+    chancePerLevel: []
+    durationPerLevel: []
+    slowPerLevel: []
+    bonusDamagePercentPerLevel: []

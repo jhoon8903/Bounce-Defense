@@ -19,6 +19,7 @@ namespace Game.Runtime.Enemy
 
         private System.Action<EnemyView, int> _damageSink;
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
+        private System.Action<EnemyView, float, float> _freezeSink;    // (view, duration, slow)
 
         // 히트 화이트 플래시(SpriteHitFlash 셰이더). MaterialPropertyBlock으로 렌더러별 주입(제로할당·공유머티리얼 무변경).
         private MaterialPropertyBlock _flashMpb;
@@ -34,6 +35,7 @@ namespace Game.Runtime.Enemy
 
         public void SetDamageSink(System.Action<EnemyView, int> sink) => _damageSink = sink;
         public void SetBurnSink(System.Action<EnemyView, float, float, int> sink) => _burnSink = sink;
+        public void SetFreezeSink(System.Action<EnemyView, float, float> sink) => _freezeSink = sink;
         
         public void SetFootprintSize(Vector2 worldSize)
         {
@@ -181,9 +183,12 @@ namespace Game.Runtime.Enemy
         // IDamageable: 볼 → DamageResolver → 여기. 실제 처리(HP감산/사망/디스폰)는 컨트롤러로 포워드.
         public void ApplyDamage(int amount) => _damageSink?.Invoke(this, amount);
 
-        // IStatusReceiver: 볼 모듈(Fire) → 여기. 상태이상 부여는 컨트롤러(EnemyStatusSimulator)로 포워드.
+        // IStatusReceiver: 볼 모듈(Fire/Ice) → 여기. 상태이상 부여는 컨트롤러(EnemyStatusSimulator)로 포워드.
         public void ApplyBurn(float durationSeconds, float damagePerSecond, int maxStacks) =>
             _burnSink?.Invoke(this, durationSeconds, damagePerSecond, maxStacks);
+
+        public void ApplyFreeze(float durationSeconds, float slow) =>
+            _freezeSink?.Invoke(this, durationSeconds, slow);
 
         // 히트 플래시량(0=원색, 1=완전 흰색). HitFeedbackController가 매 틱 감쇠시키며 호출. 블록+몹 함께(음영 제외).
         public void SetHitFlash(float amount)
@@ -200,6 +205,7 @@ namespace Game.Runtime.Enemy
             base.OnInactive(); // BaseView가 모델 언바인드 + null
             _damageSink = null;
             _burnSink = null;
+            _freezeSink = null;
             SetHitFlash(0f); // 풀 재사용 대비 플래시 원복(고스트 방지 최종 보증)
             HideVisuals();
             if (shadowRenderer != null) shadowRenderer.enabled = false;

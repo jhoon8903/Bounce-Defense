@@ -23,3 +23,23 @@ MonoBehaviour:
   - "50% \uD655\uB960\uB85C \uD2B9\uC218 \uBCFC(15 \uD53C\uD574) \uC0DD\uC131"
   - "60% \uD655\uB960\uB85C \uD2B9\uC218 \uBCFC(20 \uD53C\uD574) \uC0DD\uC131"
   ballDamagePerLevel: 1b0000001e00000021000000
+  burn:
+    durationPerLevel: []
+    dpsPerLevel: []
+    maxStacksPerLevel: 
+  freeze:
+    chancePerLevel: []
+    durationPerLevel: []
+    slowPerLevel: []
+    bonusDamagePercentPerLevel: []
+  laser:
+    rowDamagePerLevel: []
+  cluster:
+    chancePerLevel:
+    - 0.4
+    - 0.5
+    - 0.6
+    specialDamagePerLevel:
+    - 10
+    - 15
+    - 20

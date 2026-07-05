@@ -8,12 +8,13 @@ namespace Game.Runtime.Enemy
         Freeze,
     }
 
-    // 적에 걸린 개별 상태이상 1건(독립 타이머). Burn = 초당 Dps flat.
+    // 적에 걸린 개별 상태이상 1건(독립 타이머). Burn = 초당 Dps flat. Freeze = Slow(하강 감속률).
     public sealed class StatusInstance
     {
         public EnemyStatusType Type;
         public float Remaining;       // 남은 지속시간(초)
         public float Dps;             // 초당 데미지(번)
+        public float Slow;            // 하강 감속률(냉동, 0.20 = 20%)
         public float TickAccumulator; // 초당 틱 누적기
 
         public StatusInstance(EnemyStatusType type, float duration, float dps)

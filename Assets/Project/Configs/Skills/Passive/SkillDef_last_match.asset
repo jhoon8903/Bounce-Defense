@@ -24,3 +24,28 @@ MonoBehaviour:
   - "\uD3ED\uBC1C \uD53C\uD574 20"
   - "\uD3ED\uBC1C \uD53C\uD574 30"
   ballDamagePerLevel: 
+  burn:
+    durationPerLevel: []
+    dpsPerLevel: []
+    maxStacksPerLevel: 
+  freeze:
+    chancePerLevel: []
+    durationPerLevel: []
+    slowPerLevel: []
+    bonusDamagePercentPerLevel: []
+  laser:
+    rowDamagePerLevel: []
+  cluster:
+    chancePerLevel: []
+    specialDamagePerLevel: []
+  mirror:
+    bonusPercentPerLevel: []
+  lastMatch:
+    explosionDamagePerLevel:
+    - 10
+    - 20
+    - 30
+    radiusPerLevel:
+    - 1.5
+    - 2
+    - 2.5

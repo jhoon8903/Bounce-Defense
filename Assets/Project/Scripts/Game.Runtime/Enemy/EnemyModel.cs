@@ -21,6 +21,7 @@ namespace Game.Runtime.Enemy
         private bool _isDead;
         private SpawnPhase _phase = SpawnPhase.Active;
         private float _landedY; // 착지 셀 중심 Y = 하강 시작점(입장 중 이웃의 하강 floor 기준)
+        private float _freezeSlow; // 냉동 하강 감속률(0=없음, 0.20=20% 감속). EnemyStatusSimulator가 세팅.
 
         public string Id => _id;
         public EnemyDefinition Definition => _definition;
@@ -28,7 +29,8 @@ namespace Game.Runtime.Enemy
         public int MaxHp => _maxHp;
         public Vector2 Position => _position;
         public bool IsDead => _isDead;
-        public float DescentSpeed => _definition != null ? _definition.DescentSpeed : 0f;
+        // 하강속도 = 정의값 × (1 - 냉동슬로우). 냉동 중이면 그만큼 느리게 내려온다(Ice §199).
+        public float DescentSpeed => (_definition != null ? _definition.DescentSpeed : 0f) * (1f - _freezeSlow);
         public Footprint Footprint => _definition != null ? _definition.Footprint : Footprint.Size1x1;
         public bool IsEntering => _phase == SpawnPhase.Entering;
         public float LandedY => _landedY;
@@ -41,6 +43,7 @@ namespace Game.Runtime.Enemy
             _hp = _maxHp;
             _position = position;
             _isDead = false;
+            _freezeSlow = 0f; // 풀 재사용 대비 냉동 리셋
             _phase = SpawnPhase.Active; // 풀 재사용 대비 리셋. Spawn이 곧 BeginEntering으로 덮는다.
             Raise();
         }
@@ -69,6 +72,12 @@ namespace Game.Runtime.Enemy
             if (_position == position) return;
             _position = position;
             Raise();
+        }
+
+        // 냉동 하강 감속률 세팅(EnemyStatusSimulator가 매 틱 호출). 하강속도에만 반영 — 뷰 변경 없어 Raise 불필요.
+        public void SetFreezeSlow(float slow)
+        {
+            _freezeSlow = Mathf.Clamp01(slow);
         }
     }
 }

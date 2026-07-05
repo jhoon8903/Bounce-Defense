@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Mvc;
+using Game.Core.Random;
 using Game.Events;
 using Game.Runtime.Enemy;
+using Game.Runtime.Grid;
 using Game.Runtime.Motor;
 using UnityEngine;
 
@@ -14,7 +16,7 @@ namespace Game.Runtime.Combat
     //  - 로스터 = 기본 노멀 5 + 획득 액티브당 1(스킬 볼). SkillRuntime이 로드아웃 변경 시 SetRoster로 밀어넣는다.
     //    각 스폰은 결원(desired>current) 타입을 채워 동시 비행 구성이 로스터에 수렴한다("액티브가 볼을 추가").
     // 실시간 연속 모델: 좌·우·천장 벽은 정상 반사, 바닥에 닿으면 반사 대신 Char(고정 원점)로 수집.
-    public sealed class BallController : BaseController
+    public sealed class BallController : BaseController, IBallEffectContext
     {
         private const int MaxBounces = 40;
         private const int DefaultBallCount = 5; // 기본 노멀 볼 수(스펙 정정: 기본 5 + 카드당 +1).
@@ -30,6 +32,8 @@ namespace Game.Runtime.Combat
         private readonly BallConfig _config;
         private readonly DamageResolver _resolver;
         private readonly CombatEventHub _hub;
+        private readonly IRandom _random;
+        private readonly GridController _grid; // Laser 행뎀 조회(배치 권한 소유자). 히트 시점에만 질의 — 초기화 순서 무관.
         private readonly BallFiringScheduler _scheduler = new();
         private readonly Dictionary<string, BallModel> _models = new();
         private readonly Dictionary<string, BallView> _views = new();
@@ -38,6 +42,12 @@ namespace Game.Runtime.Combat
         // 바닥을 맞고 Char로 귀환 중인 볼(모터 스텝 대신 직선 홈잉). 도착 시 소멸.
         private readonly HashSet<string> _collecting = new();
         private readonly List<string> _idCache = new();
+        private readonly HashSet<int> _rowHitHandles = new(); // Laser 행뎀 dedup(멀티셀 블록 1회) 재사용 버퍼
+        // Cluster 분열 특수볼(로스터 미집계): 틱·데미지·바닥수집은 정상이나 desired/inFlight 회계에서 제외.
+        private readonly HashSet<string> _unmanaged = new();
+        // Magic Mirror(패시브): 벽튕김한 볼을 다음 직격용으로 무장, 첫 적히트에 소비형 가산% 부여(§209·§184).
+        private readonly HashSet<string> _mirrorArmed = new();
+        private float _mirrorPercent; // 0 = Magic Mirror 미보유(무장 안 함)
 
         // 로스터(쏠 볼 사양)와 타입별 desired/current 집계 — 결원 채우기로 구성 수렴.
         private readonly List<BallSpawnSpec> _roster = new();
@@ -49,14 +59,42 @@ namespace Game.Runtime.Combat
         private int _blockMask;
         private Vector2 _collectTarget = DefaultCollectTarget;
 
-        public BallController(IBallFactory factory, IClock clock, BallConfig config, DamageResolver resolver, CombatEventHub hub)
+        public BallController(IBallFactory factory, IClock clock, BallConfig config, DamageResolver resolver, CombatEventHub hub, IRandom random, GridController grid)
         {
             _factory = factory;
             _clock = clock;
             _config = config;
             _resolver = resolver;
             _hub = hub;
+            _random = random;
+            _grid = grid;
         }
+
+        // ---- IBallEffectContext (볼 모듈이 온-히트에 쓰는 코어 밖 서비스 파사드) ----
+        public IRandom Random => _random;
+
+        // Laser: 히트 적과 같은 그리드 행의 다른 적들에게 flat 2차뎀. 열 오름차순(결정론) + 블록 핸들 dedup.
+        public void DamageEnemyRow(IDamageable originEnemy, float flatDamage, BallSourceType source)
+        {
+            if (_resolver == null || _grid == null || !_grid.IsReady || flatDamage <= 0f) return;
+            if (!(originEnemy is EnemyView originView) || originView.Model == null) return;
+            int row = _grid.Model.WorldToCell(originView.Model.Position).Row;
+            int cols = _grid.Cols;
+            _rowHitHandles.Clear();
+            for (int col = 0; col < cols; col++)
+            {
+                int handle = _grid.OccupantHandleAt(col, row);
+                if (handle == GridMap.Empty || !_rowHitHandles.Add(handle)) continue; // 빈칸/이미 맞은 블록 스킵
+                if (!_grid.TryGetOccupant(handle, out IDamageable occ) || occ == originEnemy) continue; // 직격 대상 제외
+                Vector2 pos = occ is EnemyView ev && ev.Model != null ? ev.Model.Position : Vector2.zero;
+                HitContext ctx = HitContext.Secondary(occ, source, DamageKind.LaserRow, flatDamage);
+                _resolver.Resolve(ctx); // 무크리·무버프 flat, 동일 리졸버 → 사망 시 RaiseKill(Last Match 등 이어짐, §255)
+                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit);
+            }
+        }
+
+        // Magic Mirror 보유% 주입(SkillRuntime, 로드아웃 변경 시). 0 = 미보유(무장 비활성). 레벨별 +20/40/60%.
+        public void SetMirrorPercent(float percent) => _mirrorPercent = Mathf.Max(0f, percent);
 
         // Char 본체(고정 발사·수집 원점) 주입. 미호출 시 DefaultCollectTarget 사용.
         public void SetCollectTarget(Vector2 target) => _collectTarget = target;
@@ -126,6 +164,9 @@ namespace Game.Runtime.Combat
                 // 바닥 수집으로 continue하기 전에 처리 — 같은 스텝에 적+바닥을 맞아도 데미지는 살린다.
                 ResolveDamageHits(id, motor);
 
+                // Magic Mirror: 이번 스텝 벽튕김 시 '다음' 직격용으로 무장(현재 스텝 히트는 위에서 이미 소비 판정 끝).
+                if (_mirrorPercent > 0f && result.WallBounceCountThisStep > 0) _mirrorArmed.Add(id);
+
                 // 바닥면 반사면 반사 대신 수집(Char로 귀환) — 손실 없는 result.HitFloor 사용(코너 다중바운스에도 정확).
                 if (result.HitFloor) { _collecting.Add(id); continue; }
                 if (IsOutOfBounds(motor.Position) || model.BounceCount >= MaxBounces) Release(id);
@@ -134,7 +175,23 @@ namespace Game.Runtime.Combat
 
         private void OnClockFixedTick() => FixedTick(_clock.GameDeltaTime);
 
-        public BallModel Spawn(Vector2 origin, Vector2 direction, BallSpawnSpec spec)
+        public BallModel Spawn(Vector2 origin, Vector2 direction, BallSpawnSpec spec) =>
+            SpawnInternal(origin, direction, spec, managed: true);
+
+        // Cluster 분열(services.SpawnClusterBall): 히트 위치서 무작위 상향 특수볼 1개.
+        //  - 2차뎀(무크리)·무모듈(무재귀 §183)·Cluster 타입(Warm Tin 대상 아님)·로스터 미집계(unmanaged).
+        public void SpawnClusterBall(Vector2 origin, float damage)
+        {
+            if (damage <= 0f) return;
+            // 무작위 상향 방향(결정론 RNG). 아래로 쏘면 즉시 바닥수집돼 낭비 → 20~160°.
+            float t = _random != null ? _random.NextFloat() : 0.5f;
+            float angle = Mathf.Deg2Rad * (20f + t * 140f);
+            Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            BallSpawnSpec spec = new BallSpawnSpec(BallSourceType.Cluster, damage, null, false, DamageKind.ClusterSpawn);
+            SpawnInternal(origin, dir, spec, managed: false);
+        }
+
+        private BallModel SpawnInternal(Vector2 origin, Vector2 direction, BallSpawnSpec spec, bool managed)
         {
             float speed = _config != null ? _config.Speed : 12f;
             float radius = _config != null ? _config.Radius : 0.15f;
@@ -143,14 +200,17 @@ namespace Game.Runtime.Combat
             (BallModel model, BallView view) = _factory.Create(origin, spec.SourceType);
             if (model == null || view == null) return null;
 
+            // Ghost 관통 = passThroughMask에 Enemy 레이어(반사 없이 통과·데미지는 기록). 나머지는 0(정상 반사).
+            int passThroughMask = spec.PenetratesEnemies ? _enemyMask : 0;
             IBallMotor motor = new KinematicRaycastMotor();
-            motor.Init(origin, direction, speed, radius, _wallMask, _enemyMask, _blockMask, passThroughMask: 0);
+            motor.Init(origin, direction, speed, radius, _wallMask, _enemyMask, _blockMask, passThroughMask);
 
             _models[id] = model;
             _views[id] = view;
             _motors[id] = motor;
             _specs[id] = spec;
-            _inFlightByType[spec.SourceType] = InFlightOf(spec.SourceType) + 1;
+            if (managed) _inFlightByType[spec.SourceType] = InFlightOf(spec.SourceType) + 1;
+            else _unmanaged.Add(id); // 분열 특수볼 — 로스터 desired/inFlight 미집계
             return model;
         }
 
@@ -160,20 +220,27 @@ namespace Game.Runtime.Combat
         private void ResolveDamageHits(string id, IBallMotor motor)
         {
             if (_resolver == null) return;
-            IReadOnlyList<Collider2D> hits = motor.LastStepHits;
+            IReadOnlyList<BallHit> hits = motor.LastStepHits;
             if (hits == null || hits.Count == 0) return;
 
             BallSpawnSpec spec = _specs.TryGetValue(id, out BallSpawnSpec s) ? s : DefaultSpec();
             for (int i = 0; i < hits.Count; i++)
             {
-                if (hits[i] == null) continue;
-                Vector2 pos = hits[i].transform.position; // Resolve 전 캡처(살상타 디스폰 대비, 숫자는 살린다).
-                IDamageable target = hits[i].GetComponentInParent<IDamageable>();
+                Collider2D collider = hits[i].Collider;
+                if (collider == null) continue;
+                Vector2 pos = collider.transform.position; // Resolve 전 캡처(살상타 디스폰 대비, 숫자는 살린다).
+                IDamageable target = collider.GetComponentInParent<IDamageable>();
                 if (target == null) continue; // IDamageable 없는 대상(예: 브리지 미배선 블록) — 안전 무시.
-                HitContext ctx = HitContext.Direct(target, spec.SourceType, spec.BaseDamage);
+                // 로스터 볼 = 직격(크리·모디파이어·hitNormal 전후면). Cluster 특수볼 등 2차볼 = 무크리·무버프 flat.
+                HitContext ctx = spec.DamageKind == DamageKind.Direct
+                    ? HitContext.Direct(target, spec.SourceType, spec.BaseDamage, hits[i].Normal)
+                    : HitContext.Secondary(target, spec.SourceType, spec.DamageKind, spec.BaseDamage);
+                // Magic Mirror 소비: 무장된 볼의 '첫' 직격에만 가산 부여 후 해제(Ghost 관통 다중히트도 첫 적만, §184).
+                if (spec.DamageKind == DamageKind.Direct && _mirrorArmed.Remove(id))
+                    ctx.BonusAdditivePercent = _mirrorPercent;
                 _resolver.Resolve(ctx);
                 if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit);
-                spec.Module?.OnEnemyHit(target, ctx);
+                spec.Module?.OnEnemyHit(target, ctx, this); // services = 이 컨트롤러(IBallEffectContext 파사드)
             }
         }
 
@@ -182,13 +249,15 @@ namespace Game.Runtime.Combat
             if (!_models.TryGetValue(id, out BallModel model)) return;
             _views.TryGetValue(id, out BallView view);
             _factory.Release(model, view);
-            if (_specs.TryGetValue(id, out BallSpawnSpec spec))
+            // unmanaged(분열 특수볼)는 inFlight에 안 세었으므로 감산 제외. 로스터 볼만 감산.
+            if (!_unmanaged.Remove(id) && _specs.TryGetValue(id, out BallSpawnSpec spec))
                 _inFlightByType[spec.SourceType] = Mathf.Max(0, InFlightOf(spec.SourceType) - 1);
             _models.Remove(id);
             _views.Remove(id);
             _motors.Remove(id);
             _specs.Remove(id);
             _collecting.Remove(id);
+            _mirrorArmed.Remove(id); // 무장 상태로 despawn되면 정리(풀 재사용 stale 방지)
         }
 
         public void ReleaseAll()
@@ -206,11 +275,9 @@ namespace Game.Runtime.Combat
             for (int i = 0; i < DefaultBallCount; i++) _roster.Add(normal);
         }
 
-        private BallSpawnSpec DefaultSpec()
-        {
-            float dmg = _config != null ? _config.GetDamage(1) : 0f;
-            return new BallSpawnSpec(BallSourceType.Normal, dmg, null);
-        }
+        // 로스터 미설정(SkillRuntime 미배선) 시에만 쓰는 방어용 폴백. 실제 노멀 뎀은 SkillRuntime이 SetRoster로
+        // 항상 주입(NormalBallDamage 상수)하므로 게임플레이에선 도달하지 않는다 — 여기 dmg=0은 "SkillRuntime 미배선" 신호.
+        private BallSpawnSpec DefaultSpec() => new BallSpawnSpec(BallSourceType.Normal, 0f, null);
 
         private void RecomputeDesired()
         {

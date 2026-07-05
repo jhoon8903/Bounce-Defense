@@ -27,8 +27,13 @@ namespace Game.Combat
 
             float working = ctx.BaseDamage;
 
-            if (ctx.CanReceiveGlobalModifiers && _modifiers != null)
-                working *= 1f + _modifiers.GetAdditivePercentSum(ctx);
+            // 가산 버킷 = 레지스트리 self-gating 모디파이어 합 + 이 히트 소비형 보너스(Magic Mirror). 단일 곱(§185).
+            if (ctx.CanReceiveGlobalModifiers)
+            {
+                float additive = _modifiers != null ? _modifiers.GetAdditivePercentSum(ctx) : 0f;
+                additive += ctx.BonusAdditivePercent;
+                working *= 1f + additive;
+            }
 
             if (ctx.CanCrit && _modifiers != null && _random != null)
             {

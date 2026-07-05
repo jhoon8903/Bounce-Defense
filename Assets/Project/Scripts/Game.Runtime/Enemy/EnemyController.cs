@@ -31,6 +31,13 @@ namespace Game.Runtime.Enemy
         private readonly EnemyDescentSimulator _descent;
         private readonly EnemyStatusSimulator _status;
 
+        // Last Match(패시브, §212): 킬 시 반경 폭발. SkillRuntime이 로드아웃 변경 시 SetLastMatch로 값 주입(0=미보유).
+        private const int MaxExplosionDepth = 4; // 체인 허용하되 무한 재귀 방지(§257 depth 가드)
+        private float _lastMatchDamage;
+        private float _lastMatchRadius;
+        private int _explosionDepth;
+        private readonly List<string> _explodeCache = new();
+
         public EnemyController(IEnemyFactory factory, IClock clock, GridController grid, CombatEventHub hub, DamageResolver resolver)
         {
             _factory = factory;
@@ -40,7 +47,7 @@ namespace Game.Runtime.Enemy
             _resolver = resolver;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
-            _status = new EnemyStatusSimulator(ApplyBurnDamage);
+            _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow);
         }
 
         protected override void OnInitialize() => _clock.OnFixedTick += OnClockFixedTick;
@@ -80,6 +87,7 @@ namespace Game.Runtime.Enemy
             view.SetFootprintSize(placement.WorldSize);
             view.SetDamageSink(HandleDamage);
             view.SetBurnSink(HandleBurn);
+            view.SetFreezeSink(HandleFreeze);
 
             _models[id] = model;
             _views[id] = view;
@@ -88,6 +96,13 @@ namespace Game.Runtime.Enemy
             // 등장 연출 시작: 낙하 캐스케이드(순서별 지연) → 음영 → 낙하 → 덜컹 → 활성.
             _entrance.Begin(id, model, view, cascadeIndex, center, placement.WorldSize);
             return model;
+        }
+
+        // Last Match 파라미터 주입(SkillRuntime). damage 또는 radius가 0이면 미보유(폭발 비활성).
+        public void SetLastMatch(float damage, float radius)
+        {
+            _lastMatchDamage = damage;
+            _lastMatchRadius = radius;
         }
 
         // ---- 데미지(EnemyView가 포워드) ----
@@ -100,8 +115,39 @@ namespace Game.Runtime.Enemy
             model.TakeDamage(amount); // HP 감산 + Raise(숫자 갱신). 사망 판정도 여기서.
             if (!model.IsDead) return;
 
+            Vector2 deathPos = model.Position; // Last Match 폭발 중심(Despawn 전 캡처)
             _hub?.RaiseKill();
             Despawn(model.Id);
+            TryLastMatchExplosion(deathPos); // 킬(직격·번·행뎀·분열·체인 무관) → 반경 폭발(보유 시)
+        }
+
+        // Last Match: 킬 위치 반경 안 적들에게 flat 2차뎀(무크리). 폭발 처치가 또 폭발을 부를 수 있어 depth 가드(§257).
+        // AoE 처치도 동일 HandleDamage 경유라 자연히 이어짐(§255). 사망한 적은 이미 Despawn돼 반경 집합에서 제외됨.
+        private void TryLastMatchExplosion(Vector2 center)
+        {
+            if (_lastMatchDamage <= 0f || _lastMatchRadius <= 0f || _resolver == null) return;
+            if (_explosionDepth >= MaxExplosionDepth) return;
+            _explosionDepth++;
+
+            float r2 = _lastMatchRadius * _lastMatchRadius;
+            _explodeCache.Clear();
+            foreach (KeyValuePair<string, EnemyModel> kv in _models)
+            {
+                EnemyModel m = kv.Value;
+                if (m == null || m.IsDead || m.IsEntering) continue; // 등장 중(무적)·사망 제외
+                if ((m.Position - center).sqrMagnitude <= r2) _explodeCache.Add(kv.Key);
+            }
+
+            for (int i = 0; i < _explodeCache.Count; i++)
+            {
+                if (!_views.TryGetValue(_explodeCache[i], out EnemyView v) || v.Model == null) continue; // 체인 중 이미 디스폰
+                Vector2 pos = v.Model.Position;
+                HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
+                _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드)
+                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false); // 폭발 = 흰색
+            }
+
+            _explosionDepth--;
         }
 
         // 볼 모듈(Fire) → EnemyView.ApplyBurn → 여기. 상태 시뮬레이터에 번 부여(독립타이머 스택·캡).
@@ -111,6 +157,21 @@ namespace Game.Runtime.Enemy
             EnemyModel model = view.Model;
             if (model == null || model.IsDead || model.IsEntering) return;
             _status.ApplyBurn(model.Id, duration, dps, maxStacks);
+        }
+
+        // 볼 모듈(Ice) → EnemyView.ApplyFreeze → 여기. 상태 시뮬레이터에 냉동 부여(무스택 refresh).
+        private void HandleFreeze(EnemyView view, float duration, float slow)
+        {
+            if (view == null) return;
+            EnemyModel model = view.Model;
+            if (model == null || model.IsDead || model.IsEntering) return;
+            _status.ApplyFreeze(model.Id, duration, slow);
+        }
+
+        // 상태 시뮬레이터 → 여기: 현재 냉동 슬로우를 모델 하강속도에 반영(매 틱, 무변경이면 모델이 조기반환). 만료 시 0.
+        private void SetFreezeSlow(string id, float slow)
+        {
+            if (_models.TryGetValue(id, out EnemyModel model) && model != null) model.SetFreezeSlow(slow);
         }
 
         // 번 초당 틱: 2차 데미지(flat·무크리·무버프)를 동일 DamageResolver로 적용 → 숫자표기·사망 이벤트 통일.

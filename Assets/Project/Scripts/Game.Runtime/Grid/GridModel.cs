@@ -25,6 +25,7 @@ namespace Game.Runtime.Grid
 
         // ---- 기하 (순수) ----
         public Vector2 CellToWorld(int col, int row) => _geometry.CellToWorld(col, row);
+        public CellCoord WorldToCell(Vector2 world) => _geometry.WorldToCell(world); // Laser 행뎀: 적 위치→행
         public Vector2 FootprintWorldCenter(CellCoord anchor, Footprint fp) => _geometry.FootprintWorldCenter(anchor, fp);
         public Vector2 FootprintWorldSize(Footprint fp) => _geometry.FootprintWorldSize(fp);
 
