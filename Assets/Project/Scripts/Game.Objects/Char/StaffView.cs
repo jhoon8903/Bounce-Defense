@@ -2,14 +2,8 @@ using UnityEngine;
 
 namespace Project.Scripts.Game.Objects.Char
 {
+    // Char 스태프 파츠 마커(프리팹 부착). 포즈는 프리팹 값 + AnchorView 런타임 구동 — 자체 로직 없음.
     public class StaffView : MonoBehaviour
     {
-        private static readonly Vector2 InitPosition = new(-0.13f, 0.22f);
-
-        private void Initialize()
-        {
-            transform.localPosition =  InitPosition;
-            transform.localRotation = Quaternion.Euler(0,0,20);
-        }
     }
 }

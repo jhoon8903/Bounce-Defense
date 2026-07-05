@@ -35,7 +35,6 @@ namespace Game.Runtime.Enemy
         [SerializeField] [Min(0f)] private float descentSpeed = 0.5f; // 초당 월드 유닛 하강
 
         public string DisplayName => displayName;
-        public BlockSize BlockSize => blockSize;
         public Sprite BlockSprite => blockSprite;
         public Sprite MobSprite => mobSprite;
         public int BaseHp => baseHp;

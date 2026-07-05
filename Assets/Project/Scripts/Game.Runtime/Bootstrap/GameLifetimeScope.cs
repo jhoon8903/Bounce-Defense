@@ -1,7 +1,6 @@
 using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Pool;
-using Game.Core.Random;
 using Game.Events;
 using Game.Runtime.Combat;
 using Game.Runtime.Enemy;
@@ -15,9 +14,6 @@ namespace Game.Runtime.Bootstrap
 {
     public sealed class GameLifetimeScope : LifetimeScope
     {
-        [Header("RNG")]
-        [SerializeField] private int randomSeed = 12345;
-
         [Header("Pool")]
         [SerializeField] private PoolConfiguration[] poolConfigs;
         [SerializeField] private Transform poolRoot;
@@ -35,10 +31,8 @@ namespace Game.Runtime.Bootstrap
 
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.RegisterInstance(new SystemRandom(randomSeed)).As<IRandom>();
             builder.RegisterInstance(new GameClock()).As<IClock>();
             builder.RegisterInstance(new GamePool(poolConfigs)).As<IPool>();
-            builder.Register<ModifierRegistry>(Lifetime.Singleton);
             builder.Register<DamageResolver>(Lifetime.Singleton);
             builder.Register<CombatEventHub>(Lifetime.Singleton);
             BallConfig ballConfig = null;

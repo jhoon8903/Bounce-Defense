@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Game.Core.Observer;
 using UnityEngine;
 
@@ -16,7 +14,6 @@ namespace Game.Runtime.Grid
         public int Cols => _map != null ? _map.Cols : 0;
         public int Rows => _map != null ? _map.Rows : 0;
         public float CellSize => _geometry.CellSize;
-        public Vector2 Origin => _geometry.Origin;
 
         public void Initialize(int cols, int rows, float cellSize, Vector2 origin)
         {
@@ -28,9 +25,6 @@ namespace Game.Runtime.Grid
 
         // ---- 기하 (순수) ----
         public Vector2 CellToWorld(int col, int row) => _geometry.CellToWorld(col, row);
-        public Vector2 CellToWorld(CellCoord cell) => _geometry.CellToWorld(cell.Col, cell.Row);
-        public CellCoord WorldToCell(Vector2 world) => _geometry.WorldToCell(world);
-        public bool InBounds(CellCoord cell) => _geometry.InBounds(cell.Col, cell.Row);
         public Vector2 FootprintWorldCenter(CellCoord anchor, Footprint fp) => _geometry.FootprintWorldCenter(anchor, fp);
         public Vector2 FootprintWorldSize(Footprint fp) => _geometry.FootprintWorldSize(fp);
 
@@ -38,21 +32,7 @@ namespace Game.Runtime.Grid
         public bool CanPlace(CellCoord anchor, Footprint fp) => _map != null && _map.CanPlace(anchor, fp);
         // 하강 재등록용: ignoreHandle(자기 자신) 겹침 허용 점유 조회.
         public bool CanPlace(CellCoord anchor, Footprint fp, int ignoreHandle) => _map != null && _map.CanPlace(anchor, fp, ignoreHandle);
-        public bool TryFindFreeAnchor(Footprint fp, out CellCoord anchor)
-        {
-            if (_map != null) return _map.TryFindFreeAnchor(fp, out anchor);
-            anchor = default;
-            return false;
-        }
         public int OccupantHandleAt(int col, int row) => _map != null ? _map.OccupantAt(col, row) : GridMap.Empty;
-        public void RowsOf(int handle, List<int> buffer) => _map?.RowsOf(handle, buffer);
-        public IReadOnlyList<int> CellsOf(int handle) => _map != null ? _map.CellsOf(handle) : Array.Empty<int>();
-        public int OccupantsInRow(int row, List<int> buffer)
-        {
-            if (_map != null) return _map.OccupantsInRow(row, buffer);
-            buffer.Clear();
-            return 0;
-        }
 
         // ---- 점유 변경 (성공 시 Raise) ----
         public bool Place(int handle, CellCoord anchor, Footprint fp)

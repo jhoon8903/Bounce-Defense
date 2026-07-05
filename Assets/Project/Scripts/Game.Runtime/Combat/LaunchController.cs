@@ -5,7 +5,7 @@ namespace Game.Runtime.Combat
 {
     // 발사대(사신) = 발사 권한 + 고정 원점의 단일 소유자.
     // 책임: (1) 발사·수집 원점(Char 본체)을 소유하고 BallController에 주입한다(발사 스폰 + 바닥 수집 공용).
-    //       (2) 발사 라이프사이클(시작/조준/정지)을 BallController에 위임한다.
+    //       (2) 발사 라이프사이클(시작/조준)을 BallController에 위임한다. 발사는 시작 후 멈추지 않는다(실시간 연속발사).
     // 입력(조준)은 AimController가 담당하고 여기로만 위임한다 → 단방향 의존: AimController → LaunchController → BallController.
     public sealed class LaunchController : MonoBehaviour
     {
@@ -50,8 +50,6 @@ namespace Game.Runtime.Combat
             TrackDirection(direction);
             _ballController?.SetFireDirection(direction);
         }
-
-        public void StopFiring() => _ballController?.StopFiring();
 
         private void TrackDirection(Vector2 direction)
         {

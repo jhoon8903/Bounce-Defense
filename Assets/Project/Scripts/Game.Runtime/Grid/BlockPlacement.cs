@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.Runtime.Grid
 {
-    // 배치 성공 결과. 스포너/레이저가 블록을 위치·크기 지정하고 셀/행 인덱스를 얻는 데 필요한 전부.
+    // 배치 성공 결과. 블록의 위치·크기와 셀/핸들 정보를 담는다(성공/실패 판정은 TryPlaceBlock의 bool 반환).
     // WorldSize는 BoxCollider2D.size(핀볼 반사) 및 스프라이트 스케일 타깃(footprint*cellSize).
     public readonly struct BlockPlacement
     {
@@ -20,7 +20,5 @@ namespace Game.Runtime.Grid
             WorldCenter = worldCenter;
             WorldSize = worldSize;
         }
-
-        public bool IsValid => Handle > 0;
     }
 }

@@ -28,7 +28,6 @@ namespace Game.Runtime.Stage
 
         public BaseModel Base => _base;
         public StageState State => _state;
-        public int WaveIndex => _waveIndex;         // 0-based
         public int WaveNumber => _waveIndex + 1;    // 1-based(HUD)
         public int WaveCount => _stage != null ? _stage.WaveCount : 0;
         public int TotalKills => _totalKills;
@@ -73,8 +72,6 @@ namespace Game.Runtime.Stage
             if (_state == StageState.Playing) BeginWave(0);
         }
 
-        public void Restart() => StartStage();
-
         // 웨이브 = 손배치 배치도. 시작 시 전부 한 번에 스폰(등장 캐스케이드가 시각적 페이싱 담당).
         private void BeginWave(int index)
         {
@@ -116,18 +113,18 @@ namespace Game.Runtime.Stage
             BeginWave(_waveIndex);
         }
 
-        private void OnKill(EnemyKillInfo info)
+        private void OnKill()
         {
             if (_state != StageState.Playing) return;
             _resolvedThisWave++;
             _totalKills++;
         }
 
-        private void OnBreach(EnemyBreachInfo info)
+        private void OnBreach(int breachDamage)
         {
             if (_state != StageState.Playing) return;
             _resolvedThisWave++;                 // 침범도 웨이브 해소로 집계
-            _base.TakeDamage(info.BreachDamage);
+            _base.TakeDamage(breachDamage);
             if (_base.IsDead) _state = StageState.Lost; // 베이스 0 → 실패
         }
     }

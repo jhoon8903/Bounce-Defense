@@ -6,11 +6,10 @@ namespace Game.Runtime.Stage
     [CreateAssetMenu(fileName = "StageDef", menuName = "Game/Configs/StageDefinition")]
     public sealed class StageDefinition : ScriptableObject
     {
-        [SerializeField] private string displayName = "Stage 1";
+        [SerializeField] private string displayName = "Stage 1"; // 에셋 식별 메모용(런타임 미사용)
         [SerializeField] [Min(1)] private int baseHp = 300; // §43 베이스 HP
         [SerializeField] private WaveDefinition[] waves;
 
-        public string DisplayName => displayName;
         public int BaseHp => baseHp;
         public int WaveCount => waves != null ? waves.Length : 0;
 

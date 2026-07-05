@@ -1,4 +1,3 @@
-using Game.Combat;
 using Game.Core.Pool;
 using UnityEngine;
 using VContainer;
@@ -17,13 +16,13 @@ namespace Game.Runtime.Combat
             _resolver = resolver;
         }
 
-        public (BallModel model, BallView view) Create(string id, Vector2 origin, Vector2 direction, float speed, int baseDamage, BallSourceType sourceType)
+        public (BallModel model, BallView view) Create(Vector2 origin)
         {
             BallView view = _pool.Get<BallView>();
             if (view == null) return (null, null);
             _resolver.Inject(view);
             BallModel model = new BallModel();
-            model.Initialize(id, origin, direction, speed, baseDamage, sourceType);
+            model.Initialize(origin);
             view.Model = model;
             return (model, view);
         }

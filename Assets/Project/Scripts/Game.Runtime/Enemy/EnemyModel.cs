@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Game.Core.Observer;
 using Game.Runtime.Grid;
 using UnityEngine;
@@ -7,9 +6,11 @@ namespace Game.Runtime.Enemy
 {
     // 적 상태 Observable. BallModel 규율: 뷰에 보이는 변경(HP·위치)에서만 Raise.
     // HP 소유·감산은 여기(모델), 킬/디스폰/그리드 lifecycle은 EnemyController가 담당.
+    // 등장 연출의 '진행'(타이밍·낙하 곡선)은 EnemyEntranceChoreographer 소유 — 모델은 게임플레이에
+    // 의미 있는 상태만 든다: 입장 중인가(무적·하강 제외)와 착지 목표 Y(하강 이웃 계산 기준).
     public sealed class EnemyModel : Observable
     {
-        // 등장 연출 단계. Entering = 낙하/덜컹 중(무적, 하강 제외). Active = 전투/하강 개시.
+        // 등장 단계. Entering = 낙하/덜컹 중(무적, 하강 제외). Active = 전투/하강 개시.
         public enum SpawnPhase { Entering, Active }
 
         private string _id;
@@ -17,38 +18,19 @@ namespace Game.Runtime.Enemy
         private int _hp;
         private int _maxHp;
         private Vector2 _position;
-        private int _gridHandle; // 현재 점유 중인 그리드 블록 핸들(하강 시 재등록으로 갱신)
         private bool _isDead;
-        private readonly List<StatusInstance> _statuses = new(); // Phase 4 상태이상 컨테이너
-
-        // ---- 등장 연출 파라미터(컨트롤러가 낙하/덜컹 모션을 계산할 때 읽는다) ----
         private SpawnPhase _phase = SpawnPhase.Active;
-        private float _entElapsed;
-        private float _entDelay;
-        private float _entShadowLead;
-        private float _entDropDuration;
-        private float _entBounceDuration;
-        private float _dropFromY;
-        private float _landedY;
+        private float _landedY; // 착지 셀 중심 Y = 하강 시작점(입장 중 이웃의 하강 floor 기준)
 
         public string Id => _id;
         public EnemyDefinition Definition => _definition;
         public int Hp => _hp;
         public int MaxHp => _maxHp;
         public Vector2 Position => _position;
-        public int GridHandle => _gridHandle;
         public bool IsDead => _isDead;
         public float DescentSpeed => _definition != null ? _definition.DescentSpeed : 0f;
         public Footprint Footprint => _definition != null ? _definition.Footprint : Footprint.Size1x1;
-        public IReadOnlyList<StatusInstance> Statuses => _statuses;
-
         public bool IsEntering => _phase == SpawnPhase.Entering;
-        public float EntElapsed => _entElapsed;
-        public float EntDelay => _entDelay;
-        public float EntShadowLead => _entShadowLead;
-        public float EntDropDuration => _entDropDuration;
-        public float EntBounceDuration => _entBounceDuration;
-        public float DropFromY => _dropFromY;
         public float LandedY => _landedY;
 
         public void Initialize(string id, EnemyDefinition definition, Vector2 position)
@@ -58,31 +40,16 @@ namespace Game.Runtime.Enemy
             _maxHp = definition != null ? definition.BaseHp : 1;
             _hp = _maxHp;
             _position = position;
-            _gridHandle = 0;
             _isDead = false;
-            _phase = SpawnPhase.Active; // 풀 재사용 대비 리셋. Spawn이 곧 BeginEntrance로 덮는다.
-            _entElapsed = 0f;
-            _statuses.Clear();
+            _phase = SpawnPhase.Active; // 풀 재사용 대비 리셋. Spawn이 곧 BeginEntering으로 덮는다.
             Raise();
         }
 
-        // 등장 연출 시작(컨트롤러가 스폰 직후 호출). landedY = 착지 셀 중심 Y = 하강 시작점.
-        public void BeginEntrance(float delay, float shadowLead, float dropDuration, float bounceDuration, float dropFromY, float landedY)
+        // 등장 시작(스폰 직후 choreographer가 호출). landedY = 착지 셀 중심 Y = 하강 시작점.
+        public void BeginEntering(float landedY)
         {
             _phase = SpawnPhase.Entering;
-            _entElapsed = 0f;
-            _entDelay = delay;
-            _entShadowLead = shadowLead;
-            _entDropDuration = dropDuration;
-            _entBounceDuration = bounceDuration;
-            _dropFromY = dropFromY;
             _landedY = landedY;
-        }
-
-        public float AdvanceEntrance(float dt)
-        {
-            _entElapsed += dt;
-            return _entElapsed;
         }
 
         public void MarkActive() => _phase = SpawnPhase.Active;
@@ -103,17 +70,5 @@ namespace Game.Runtime.Enemy
             _position = position;
             Raise();
         }
-
-        // 그리드 재등록(하강 행경계 통과) 시 핸들 갱신. 렌더 상태 아니므로 Raise 생략.
-        public void SetGridHandle(int handle) => _gridHandle = handle;
-
-        // ---- 상태이상(Phase 4 스텁) ----
-        public void AddStatus(StatusInstance status)
-        {
-            if (status == null) return;
-            _statuses.Add(status);
-        }
-
-        public void ClearStatuses() => _statuses.Clear();
     }
 }

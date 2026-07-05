@@ -1,7 +1,6 @@
 using Game.Combat;
 using Game.Core.Mvc;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Game.Runtime.Enemy
@@ -18,7 +17,7 @@ namespace Game.Runtime.Enemy
         [SerializeField] private Image hpSliderFill;              // 몸체 HP 숫자(선택 — 미배선 시 스킵)
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
 
-        private System.Action<EnemyView, int, HitContext> _damageSink;
+        private System.Action<EnemyView, int> _damageSink;
         private Vector3 _mobBaseScale = Vector3.one; // 스쿼시 기준(프리팹 몹 스케일이 1이 아닐 수 있어 캡처)
         private bool _mobBaseCaptured;
         private CanvasGroup _hpCanvasGroup;
@@ -26,7 +25,7 @@ namespace Game.Runtime.Enemy
         private Vector2 _hpBarBaseAnchored;          // 프리팹 기준 위치(1칸 높이 기준). 2칸 이상이면 그만큼 아래로.
         private bool _hpBarBaseCaptured;
 
-        public void SetDamageSink(System.Action<EnemyView, int, HitContext> sink) => _damageSink = sink;
+        public void SetDamageSink(System.Action<EnemyView, int> sink) => _damageSink = sink;
         
         public void SetFootprintSize(Vector2 worldSize)
         {
@@ -73,13 +72,12 @@ namespace Game.Runtime.Enemy
             RefreshHp(model);
         }
         
-        public void BeginEntranceVisual(Sprite shadowSprite, Vector2 footprintSize)
+        public void BeginEntranceVisual(Vector2 footprintSize)
         {
             EnsureShadow();
             if (shadowRenderer != null)
             {
-                Sprite s = shadowSprite != null ? shadowSprite : (blockRenderer != null ? blockRenderer.sprite : null);
-                shadowRenderer.sprite = s;
+                shadowRenderer.sprite = blockRenderer != null ? blockRenderer.sprite : null;
                 if (shadowRenderer.drawMode != SpriteDrawMode.Simple) shadowRenderer.size = footprintSize;
                 Color c = shadowRenderer.color; c.a = 0f; shadowRenderer.color = c;
                 shadowRenderer.enabled = false;
@@ -172,8 +170,8 @@ namespace Game.Runtime.Enemy
             if (boxCollider != null) boxCollider.enabled = false;
         }
 
-        // IDamageable: 볼 → DamageResolver.ApplyDamageStage → 여기. 실제 처리는 컨트롤러로 포워드.
-        public void ApplyDamage(int amount, HitContext context) => _damageSink?.Invoke(this, amount, context);
+        // IDamageable: 볼 → DamageResolver → 여기. 실제 처리(HP감산/사망/디스폰)는 컨트롤러로 포워드.
+        public void ApplyDamage(int amount) => _damageSink?.Invoke(this, amount);
 
         public override void OnInactive()
         {

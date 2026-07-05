@@ -13,7 +13,7 @@ namespace Game.Runtime.Grid
         private readonly int _cols;
         private readonly int _rows;
         private readonly int[] _cells;                              // row*Cols + col -> 핸들
-        private readonly Dictionary<int, List<int>> _cellsByHandle; // 핸들 -> 점유 셀 인덱스(제거/RowsOf O(풋프린트))
+        private readonly Dictionary<int, List<int>> _cellsByHandle; // 핸들 -> 점유 셀 인덱스(제거 O(풋프린트))
 
         public int Cols => _cols;
         public int Rows => _rows;
@@ -96,49 +96,6 @@ namespace Game.Runtime.Grid
         {
             if (col < 0 || col >= _cols || row < 0 || row >= _rows) return Empty;
             return _cells[Index(col, row)];
-        }
-
-        // 상단 우선(row 오름차순=최상단 먼저), 동률이면 좌측(col 오름차순). 결정적, RNG 없음.
-        public bool TryFindFreeAnchor(Footprint fp, out CellCoord anchor)
-        {
-            for (int row = 0; row <= _rows - fp.Height; row++)
-                for (int col = 0; col <= _cols - fp.Width; col++)
-                {
-                    CellCoord candidate = new(col, row);
-                    if (CanPlace(candidate, fp)) { anchor = candidate; return true; }
-                }
-            anchor = default;
-            return false;
-        }
-
-        public IReadOnlyList<int> CellsOf(int handle) =>
-            _cellsByHandle.TryGetValue(handle, out List<int> list) ? list : Array.Empty<int>();
-
-        // 핸들이 겹치는 서로 다른 행(멀티셀/레이저). 오름차순.
-        public void RowsOf(int handle, List<int> buffer)
-        {
-            buffer.Clear();
-            if (!_cellsByHandle.TryGetValue(handle, out List<int> list)) return;
-            for (int i = 0; i < list.Count; i++)
-            {
-                int row = list[i] / _cols;
-                if (!buffer.Contains(row)) buffer.Add(row);
-            }
-            buffer.Sort();
-        }
-
-        // 한 행에 겹치는 서로 다른 핸들, 좌->우(col 오름차순) = 결정적 순서(시드 재현성). 멀티셀은 한 번만.
-        public int OccupantsInRow(int row, List<int> buffer)
-        {
-            buffer.Clear();
-            if (row < 0 || row >= _rows) return 0;
-            int rowBase = row * _cols;
-            for (int col = 0; col < _cols; col++)
-            {
-                int handle = _cells[rowBase + col];
-                if (handle != Empty && !buffer.Contains(handle)) buffer.Add(handle);
-            }
-            return buffer.Count;
         }
     }
 }
