@@ -5,46 +5,50 @@ using UnityEngine;
 
 namespace Game.Runtime.Stage
 {
-    // 한 웨이브의 스폰 정의(개발플랜 §216 spawnTable). 그룹별 적 종류×수를 순서대로 스폰.
+    // 한 웨이브 = Scene View 에디터로 손배치한 몹 목록(§216 개정: spawnTable(종류×수) → 셀 배치도).
+    // 각 배치 = EnemyDefinition + 셀 좌표(col,row). 웨이브 시작 시 전부 스폰되며 낙하 캐스케이드로 등장.
     [CreateAssetMenu(fileName = "WaveDef", menuName = "Game/Configs/WaveDefinition")]
     public sealed class WaveDefinition : ScriptableObject
     {
         [Serializable]
-        public struct SpawnGroup
+        public struct Placement
         {
             public EnemyDefinition enemy;
-            [Min(1)] public int count;
+            public int col;
+            public int row;
         }
 
-        [SerializeField] private SpawnGroup[] groups;
-        [SerializeField] [Min(0.05f)] private float spawnInterval = 0.8f; // 스폰 간격(초)
+        [SerializeField] private Placement[] placements;
 
-        public float SpawnInterval => spawnInterval;
-
-        // 이 웨이브의 총 스폰 수 = 전멸 판정 기준(§217 killsRequired=전멸 수).
-        public int TotalCount
+        // 유효 배치 수 = 전멸 판정 기준(§217).
+        public int PlacementCount
         {
             get
             {
                 int n = 0;
-                if (groups != null)
-                    for (int i = 0; i < groups.Length; i++)
-                        if (groups[i].enemy != null) n += Mathf.Max(0, groups[i].count);
+                if (placements != null)
+                    for (int i = 0; i < placements.Length; i++)
+                        if (placements[i].enemy != null) n++;
                 return n;
             }
         }
 
-        // 스폰 순서대로 EnemyDefinition을 큐에 펼친다.
-        public void BuildSpawnQueue(List<EnemyDefinition> buffer)
+        // 유효(enemy != null) 배치를 순서대로 버퍼에 채운다. 순서 = 캐스케이드 인덱스(등장 지연).
+        public void BuildPlacements(List<Placement> buffer)
         {
             buffer.Clear();
-            if (groups == null) return;
-            for (int i = 0; i < groups.Length; i++)
-            {
-                SpawnGroup g = groups[i];
-                if (g.enemy == null) continue;
-                for (int k = 0; k < g.count; k++) buffer.Add(g.enemy);
-            }
+            if (placements == null) return;
+            for (int i = 0; i < placements.Length; i++)
+                if (placements[i].enemy != null) buffer.Add(placements[i]);
         }
+
+#if UNITY_EDITOR
+        // 에디터 전용 배치 목록 접근(WaveEditorWindow가 읽고 쓴다). 런타임 코드는 BuildPlacements만 사용.
+        public Placement[] EditorPlacements
+        {
+            get => placements;
+            set => placements = value;
+        }
+#endif
     }
 }

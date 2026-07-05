@@ -475,6 +475,7 @@ MonoBehaviour:
   gridConfig: {fileID: 0}
   gridAnchor: {fileID: 1556205111}
   gridDebugView: {fileID: 1556205112}
+  spawnConfig: {fileID: 0}
   stageDefinition: {fileID: 11400000, guid: 941bcfdd1d9664935847da7c30f80a05, type: 2}
 --- !u!114 &408277711 stripped
 MonoBehaviour:

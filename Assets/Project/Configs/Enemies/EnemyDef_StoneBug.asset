@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: EnemyDef_StoneBug
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Enemy.EnemyDefinition
   displayName: StoneBug
-  blockSize: 0
-  blockSprite: {fileID: 21300000, guid: 297229887d69644a08df83c5954d9792, type: 3}
+  blockSize: 2
+  blockSprite: {fileID: 21300000, guid: 41112103734b3418589127bda7ecdc75, type: 3}
   mobSprite: {fileID: 21300000, guid: f1b791f5eba3645c9bf3edbbf1204b2c, type: 3}
   baseHp: 30
+  breachDamage: 10
   descentSpeed: 0.5

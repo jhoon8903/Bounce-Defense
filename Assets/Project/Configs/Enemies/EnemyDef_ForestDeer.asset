@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: EnemyDef_ForestDeer
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Enemy.EnemyDefinition
   displayName: ForestDeer
-  blockSize: 2
-  blockSprite: {fileID: 21300000, guid: 41112103734b3418589127bda7ecdc75, type: 3}
+  blockSize: 1
+  blockSprite: {fileID: 21300000, guid: df84a78c850f24ebc898aa339c69bd02, type: 3}
   mobSprite: {fileID: 21300000, guid: 9fce48eea3ea34b7fac33c10eba18ec7, type: 3}
   baseHp: 60
+  breachDamage: 10
   descentSpeed: 0.4

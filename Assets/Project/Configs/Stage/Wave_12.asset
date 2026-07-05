@@ -10,51 +10,57 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e4e3fc158afb4fe4945ff387983a507, type: 3}
-  m_Name: Wave_3
+  m_Name: Wave_12
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Stage.WaveDefinition
   placements:
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 0
-    row: 2
+    row: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 2
-    row: 2
+    row: 1
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 4
     row: 2
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 6
-    row: 2
+    row: 3
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 4
+    row: 4
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 2
+    row: 5
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 0
+    row: 6
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 7
-    row: 3
+    row: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 5
-    row: 3
+    row: 1
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
-    col: 3
-    row: 3
+    col: 2
+    row: 2
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 1
     row: 3
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 5
+    row: 5
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 7
+    row: 6
+  - enemy: {fileID: 11400000, guid: b45c17c2afed9404c8ee9f27d806f939, type: 2}
+    col: 7
+    row: 1
+  - enemy: {fileID: 11400000, guid: b45c17c2afed9404c8ee9f27d806f939, type: 2}
     col: 0
+    row: 1
+  - enemy: {fileID: 11400000, guid: 72cfb9a3cc6e64a9790a96479a6e0371, type: 2}
+    col: 1
     row: 4
-  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
-    col: 2
+  - enemy: {fileID: 11400000, guid: 72cfb9a3cc6e64a9790a96479a6e0371, type: 2}
+    col: 7
     row: 4
-  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
-    col: 4
-    row: 4
-  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
-    col: 6
-    row: 4
-  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
-    col: 2
-    row: 0
-  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
-    col: 6
-    row: 0
-  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
-    col: 4
-    row: 0

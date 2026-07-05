@@ -3,6 +3,7 @@ using Game.Core.Clock;
 using Game.Core.Mvc;
 using Game.Events;
 using Game.Runtime.Enemy;
+using Game.Runtime.Grid;
 
 namespace Game.Runtime.Stage
 {
@@ -18,12 +19,9 @@ namespace Game.Runtime.Stage
         private readonly StageDefinition _stage;
         private readonly BaseModel _base = new();
 
-        private readonly List<EnemyDefinition> _spawnQueue = new();
-        private int _spawnIndex;        // 다음 스폰할 큐 인덱스
+        private readonly List<WaveDefinition.Placement> _placements = new();
         private int _resolvedThisWave;  // 이번 웨이브 해소된 적(킬+침범) 수
-        private int _plannedThisWave;   // 이번 웨이브 총 스폰 수
-        private float _spawnTimer;
-        private float _spawnInterval;
+        private int _plannedThisWave;   // 이번 웨이브 실제 스폰 수(배치 성공분)
         private int _waveIndex;
         private int _totalKills;
         private StageState _state = StageState.Idle;
@@ -34,7 +32,7 @@ namespace Game.Runtime.Stage
         public int WaveNumber => _waveIndex + 1;    // 1-based(HUD)
         public int WaveCount => _stage != null ? _stage.WaveCount : 0;
         public int TotalKills => _totalKills;
-        public int AliveThisWave => _spawnIndex - _resolvedThisWave; // 현재 전장에 남은(스폰됨-해소됨) 적
+        public int AliveThisWave => _plannedThisWave - _resolvedThisWave; // 현재 전장에 남은(스폰됨-해소됨) 적
 
         public StageController(EnemyController enemies, CombatEventHub hub, IClock clock, StageDefinition stage)
         {
@@ -77,16 +75,22 @@ namespace Game.Runtime.Stage
 
         public void Restart() => StartStage();
 
+        // 웨이브 = 손배치 배치도. 시작 시 전부 한 번에 스폰(등장 캐스케이드가 시각적 페이싱 담당).
         private void BeginWave(int index)
         {
             WaveDefinition wave = _stage.GetWave(index);
-            _spawnQueue.Clear();
-            wave?.BuildSpawnQueue(_spawnQueue);
-            _spawnIndex = 0;
+            _placements.Clear();
+            wave?.BuildPlacements(_placements);
             _resolvedThisWave = 0;
-            _plannedThisWave = _spawnQueue.Count;
-            _spawnInterval = wave != null ? wave.SpawnInterval : 0.8f;
-            _spawnTimer = _spawnInterval; // 첫 적 즉시 스폰
+
+            int spawned = 0;
+            for (int i = 0; i < _placements.Count; i++)
+            {
+                WaveDefinition.Placement p = _placements[i];
+                CellCoord anchor = new CellCoord(p.col, p.row);
+                if (_enemies.Spawn(p.enemy, anchor, spawned) != null) spawned++; // cascadeIndex = 성공 순서
+            }
+            _plannedThisWave = spawned;
             if (_plannedThisWave == 0) AdvanceWave(); // 빈 웨이브면 즉시 진행
         }
 
@@ -94,26 +98,8 @@ namespace Game.Runtime.Stage
         {
             if (_state != StageState.Playing) return;
 
-            // 스폰 캐이던스: 큐가 남았으면 interval마다 1마리. 상단 자리 없으면 다음 틱 재시도(과밀 대기).
-            if (_spawnIndex < _spawnQueue.Count)
-            {
-                _spawnTimer += fixedDeltaTime;
-                if (_spawnTimer >= _spawnInterval)
-                {
-                    if (_enemies.Spawn(_spawnQueue[_spawnIndex]) != null)
-                    {
-                        _spawnIndex++;
-                        _spawnTimer = 0f;
-                    }
-                    else
-                    {
-                        _spawnTimer = _spawnInterval; // 자리 없음 → 다음 틱 재시도
-                    }
-                }
-            }
-
-            // 웨이브 전멸 = 계획된 전부 스폰 + 전부 해소(킬/침범).
-            if (_spawnIndex >= _plannedThisWave && _resolvedThisWave >= _plannedThisWave)
+            // 웨이브 전멸 = 스폰된 전부 해소(킬/침범).
+            if (_plannedThisWave > 0 && _resolvedThisWave >= _plannedThisWave)
                 AdvanceWave();
         }
 

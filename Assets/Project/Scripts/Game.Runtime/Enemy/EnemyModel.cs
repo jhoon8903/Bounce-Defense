@@ -9,6 +9,9 @@ namespace Game.Runtime.Enemy
     // HP 소유·감산은 여기(모델), 킬/디스폰/그리드 lifecycle은 EnemyController가 담당.
     public sealed class EnemyModel : Observable
     {
+        // 등장 연출 단계. Entering = 낙하/덜컹 중(무적, 하강 제외). Active = 전투/하강 개시.
+        public enum SpawnPhase { Entering, Active }
+
         private string _id;
         private EnemyDefinition _definition;
         private int _hp;
@@ -17,6 +20,16 @@ namespace Game.Runtime.Enemy
         private int _gridHandle; // 현재 점유 중인 그리드 블록 핸들(하강 시 재등록으로 갱신)
         private bool _isDead;
         private readonly List<StatusInstance> _statuses = new(); // Phase 4 상태이상 컨테이너
+
+        // ---- 등장 연출 파라미터(컨트롤러가 낙하/덜컹 모션을 계산할 때 읽는다) ----
+        private SpawnPhase _phase = SpawnPhase.Active;
+        private float _entElapsed;
+        private float _entDelay;
+        private float _entShadowLead;
+        private float _entDropDuration;
+        private float _entBounceDuration;
+        private float _dropFromY;
+        private float _landedY;
 
         public string Id => _id;
         public EnemyDefinition Definition => _definition;
@@ -29,6 +42,15 @@ namespace Game.Runtime.Enemy
         public Footprint Footprint => _definition != null ? _definition.Footprint : Footprint.Size1x1;
         public IReadOnlyList<StatusInstance> Statuses => _statuses;
 
+        public bool IsEntering => _phase == SpawnPhase.Entering;
+        public float EntElapsed => _entElapsed;
+        public float EntDelay => _entDelay;
+        public float EntShadowLead => _entShadowLead;
+        public float EntDropDuration => _entDropDuration;
+        public float EntBounceDuration => _entBounceDuration;
+        public float DropFromY => _dropFromY;
+        public float LandedY => _landedY;
+
         public void Initialize(string id, EnemyDefinition definition, Vector2 position)
         {
             _id = id;
@@ -38,14 +60,38 @@ namespace Game.Runtime.Enemy
             _position = position;
             _gridHandle = 0;
             _isDead = false;
+            _phase = SpawnPhase.Active; // 풀 재사용 대비 리셋. Spawn이 곧 BeginEntrance로 덮는다.
+            _entElapsed = 0f;
             _statuses.Clear();
             Raise();
         }
 
+        // 등장 연출 시작(컨트롤러가 스폰 직후 호출). landedY = 착지 셀 중심 Y = 하강 시작점.
+        public void BeginEntrance(float delay, float shadowLead, float dropDuration, float bounceDuration, float dropFromY, float landedY)
+        {
+            _phase = SpawnPhase.Entering;
+            _entElapsed = 0f;
+            _entDelay = delay;
+            _entShadowLead = shadowLead;
+            _entDropDuration = dropDuration;
+            _entBounceDuration = bounceDuration;
+            _dropFromY = dropFromY;
+            _landedY = landedY;
+        }
+
+        public float AdvanceEntrance(float dt)
+        {
+            _entElapsed += dt;
+            return _entElapsed;
+        }
+
+        public void MarkActive() => _phase = SpawnPhase.Active;
+
         // 데미지 적용(HP 상태만). 사망 판정은 여기서, 킬 이벤트·디스폰은 컨트롤러가 IsDead를 보고 처리.
+        // 등장 중(Entering)엔 무적 — 낙하하는 몹은 아직 전장에 없다.
         public void TakeDamage(int amount)
         {
-            if (_isDead || amount <= 0) return;
+            if (_isDead || amount <= 0 || _phase == SpawnPhase.Entering) return;
             _hp = Mathf.Max(0, _hp - amount);
             if (_hp == 0) _isDead = true;
             Raise(); // HP 숫자 갱신
