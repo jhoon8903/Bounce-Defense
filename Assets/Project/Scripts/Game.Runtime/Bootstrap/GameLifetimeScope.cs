@@ -1,11 +1,16 @@
 using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Pool;
+using Game.Core.Random;
 using Game.Events;
+using Game.Roguelike;
 using Game.Runtime.Combat;
 using Game.Runtime.Enemy;
 using Game.Runtime.Grid;
+using Game.Runtime.Progression;
 using Game.Runtime.Stage;
+using Game.Runtime.UI;
+using Game.Skills;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -28,6 +33,12 @@ namespace Game.Runtime.Bootstrap
 
         [Header("Stage")]
         [SerializeField] private StageDefinition stageDefinition; // 웨이브/베이스HP 데이터
+
+        [Header("Roguelike (Phase 3 카드 드래프트)")]
+        [SerializeField] private SkillDatabase skillDatabase;         // 10스킬 풀(액티브5/패시브5)
+        [SerializeField] private LevelProgressView levelProgressView; // XP 진행도 바
+        [SerializeField] private CardSelectView cardSelectView;       // 3택 카드 패널
+        [SerializeField] private int rngSeed = 12345;                 // 시드 RNG(§265 결정론·재현)
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -62,6 +73,27 @@ namespace Game.Runtime.Bootstrap
             // Stage: 웨이브 진행/베이스HP/승패. StageDefinition 인스턴스 주입(BallConfig/GridConfig와 동일 방식).
             builder.RegisterInstance(stageDefinition != null ? stageDefinition : ScriptableObject.CreateInstance<StageDefinition>());
             builder.Register<StageController>(Lifetime.Singleton);
+
+            // Roguelike(Phase 3): 킬 XP 레벨업 → 3택 카드 드래프트. 순수 로직(로드아웃/드로우/레벨)은 asmdef,
+            // 뷰는 씬 컴포넌트(RegisterComponent). 뷰/DB 미배선이면 드래프트 비활성(코어 루프는 그대로 동작).
+            builder.RegisterInstance(new SystemRandom(rngSeed)).As<IRandom>(); // 시드 결정론
+            builder.Register<PlayerLoadout>(Lifetime.Singleton);
+            builder.RegisterInstance(skillDatabase != null ? skillDatabase : ScriptableObject.CreateInstance<SkillDatabase>());
+            builder.Register(resolver =>
+            {
+                StageDefinition s = resolver.Resolve<StageDefinition>();
+                return new LevelModel(s.XpPerKill, s.BaseXpToLevel, s.XpGrowthPerLevel);
+            }, Lifetime.Singleton);
+            builder.Register<CardDrawService>(Lifetime.Singleton);
+
+            bool draftReady = levelProgressView != null && cardSelectView != null;
+            if (draftReady)
+            {
+                builder.RegisterComponent(levelProgressView);
+                builder.RegisterComponent(cardSelectView);
+                builder.Register<CardDraftController>(Lifetime.Singleton);
+            }
+
             builder.RegisterBuildCallback(container =>
             {
                 IPool pool = container.Resolve<IPool>();
@@ -81,6 +113,9 @@ namespace Game.Runtime.Bootstrap
 
                 // 스테이지 컨트롤러는 적 컨트롤러 준비 후 초기화(초기화 시 웨이브 스폰이 시작된다).
                 container.Resolve<StageController>().Initialize();
+
+                // 카드 드래프트: 킬→XP 구독 + 뷰 바인드. 뷰/DB가 씬에 배선된 경우에만 활성.
+                if (draftReady) container.Resolve<CardDraftController>().Initialize();
 
                 // 디버그 HUD(씬에 있으면) 주입 — 웨이브/베이스/상태 가시화.
                 StageHudView hud = UnityEngine.Object.FindFirstObjectByType<StageHudView>();

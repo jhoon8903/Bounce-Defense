@@ -10,8 +10,16 @@ namespace Game.Runtime.Stage
         [SerializeField] [Min(1)] private int baseHp = 300; // §43 베이스 HP
         [SerializeField] private WaveDefinition[] waves;
 
+        [Header("Progression (킬 기반 XP 레벨업, 결정 B)")]
+        [SerializeField] [Min(1)] private int xpPerKill = 1;        // 킬당 XP
+        [SerializeField] [Min(1)] private int baseXpToLevel = 5;    // Lv1→2 필요 XP(≈킬 수)
+        [SerializeField] [Min(0)] private int xpGrowthPerLevel = 3; // 레벨마다 임계 증가(선형)
+
         public int BaseHp => baseHp;
         public int WaveCount => waves != null ? waves.Length : 0;
+        public int XpPerKill => xpPerKill;
+        public int BaseXpToLevel => baseXpToLevel;
+        public int XpGrowthPerLevel => xpGrowthPerLevel;
 
         public WaveDefinition GetWave(int index) =>
             waves != null && index >= 0 && index < waves.Length ? waves[index] : null;

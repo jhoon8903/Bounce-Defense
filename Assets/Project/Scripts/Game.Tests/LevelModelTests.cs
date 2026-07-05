@@ -1,0 +1,74 @@
+using Game.Roguelike;
+using NUnit.Framework;
+
+namespace Game.Tests
+{
+    // 킬 기반 XP 레벨업(결정 B): 임계 도달 시 레벨업 + OnLevelUp 발화 + pending 큐, 나머지 XP 이월.
+    public sealed class LevelModelTests
+    {
+        [Test]
+        public void AddKill_AccumulatesXpWithoutLevelUp()
+        {
+            LevelModel m = new LevelModel(1, 5, 0);
+            for (int i = 0; i < 4; i++) m.AddKill();
+            Assert.AreEqual(1, m.Level);
+            Assert.AreEqual(4, m.Xp);
+            Assert.AreEqual(0.8f, m.Progress, 0.0001f);
+        }
+
+        [Test]
+        public void AddKill_LevelsUpAtThreshold_FiresEvent()
+        {
+            LevelModel m = new LevelModel(1, 5, 0);
+            int fired = 0;
+            m.OnLevelUp += () => fired++;
+            for (int i = 0; i < 5; i++) m.AddKill();
+            Assert.AreEqual(2, m.Level);
+            Assert.AreEqual(0, m.Xp);
+            Assert.AreEqual(1, m.PendingLevelUps);
+            Assert.AreEqual(1, fired);
+        }
+
+        [Test]
+        public void AddKill_CarriesRemainder()
+        {
+            LevelModel m = new LevelModel(1, 5, 0);
+            for (int i = 0; i < 6; i++) m.AddKill();
+            Assert.AreEqual(2, m.Level);
+            Assert.AreEqual(1, m.Xp);
+        }
+
+        [Test]
+        public void Growth_IncreasesNextThreshold()
+        {
+            // base 5, growth 2 → L1→2 needs 5, L2→3 needs 7. 12 kills = L3.
+            LevelModel m = new LevelModel(1, 5, 2);
+            for (int i = 0; i < 12; i++) m.AddKill();
+            Assert.AreEqual(3, m.Level);
+            Assert.AreEqual(0, m.Xp);
+            Assert.AreEqual(2, m.PendingLevelUps);
+        }
+
+        [Test]
+        public void TryConsumeLevelUp_DrainsQueue()
+        {
+            LevelModel m = new LevelModel(1, 5, 2);
+            for (int i = 0; i < 12; i++) m.AddKill(); // 2 pending
+            Assert.IsTrue(m.TryConsumeLevelUp());
+            Assert.IsTrue(m.TryConsumeLevelUp());
+            Assert.IsFalse(m.TryConsumeLevelUp());
+            Assert.AreEqual(0, m.PendingLevelUps);
+        }
+
+        [Test]
+        public void ResetProgression_BackToLevel1()
+        {
+            LevelModel m = new LevelModel(1, 5, 0);
+            for (int i = 0; i < 7; i++) m.AddKill();
+            m.ResetProgression();
+            Assert.AreEqual(1, m.Level);
+            Assert.AreEqual(0, m.Xp);
+            Assert.AreEqual(0, m.PendingLevelUps);
+        }
+    }
+}

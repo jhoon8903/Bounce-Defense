@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d65ef8e5bbda94bf89380ce37bdf1a62, type: 3}
+  m_Name: SkillDef_emerald_dagger
+  m_EditorClassIdentifier: Game.Skills::Game.Skills.SkillDefinition
+  skillId: emerald_dagger
+  displayName: "\uC5D0\uBA54\uB784\uB4DC \uB2E8\uAC80"
+  category: 1
+  icon: {fileID: 21300000, guid: 764b0a277a983483cb22490d1d9ca253, type: 3}
+  maxLevel: 3
+  descriptionPerLevel:
+  - "\uD6C4\uBA74 \uD0C0\uACA9 \uC2DC \uCE58\uBA85\uD0C0 \uD655\uB960 +20%"
+  - "\uD6C4\uBA74 \uD0C0\uACA9 \uC2DC \uCE58\uBA85\uD0C0 \uD655\uB960 +30%"
+  - "\uD6C4\uBA74 \uD0C0\uACA9 \uC2DC \uCE58\uBA85\uD0C0 \uD655\uB960 +40%"
+  ballDamagePerLevel: 

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d65ef8e5bbda94bf89380ce37bdf1a62, type: 3}
+  m_Name: SkillDef_ice_ball
+  m_EditorClassIdentifier: Game.Skills::Game.Skills.SkillDefinition
+  skillId: ice_ball
+  displayName: "\uC544\uC774\uC2A4\uBCFC"
+  category: 0
+  icon: {fileID: 21300000, guid: 99eed861e6e8a49a6aefc7a2bfeda208, type: 3}
+  maxLevel: 3
+  descriptionPerLevel:
+  - "30% 5\uCD08 \uB0C9\uB3D9\xB7\uC774\uC18D-10%\xB7\uCD94\uAC00\uD53C\uD574+10%"
+  - "35% 6\uCD08 \uB0C9\uB3D9\xB7\uC774\uC18D-15%\xB7\uCD94\uAC00+15%"
+  - "40% 7\uCD08 \uB0C9\uB3D9\xB7\uC774\uC18D-20%\xB7\uCD94\uAC00+20%"
+  ballDamagePerLevel: 190000002500000032000000
