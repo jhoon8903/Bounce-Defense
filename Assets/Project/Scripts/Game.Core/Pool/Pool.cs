@@ -28,7 +28,6 @@ namespace Game.Core.Pool
                 actionOnGet: OnGet,
                 actionOnRelease: OnRelease,
                 actionOnDestroy: OnDestroy,
-                collectionCheck: _config.CollectionCheck,
                 defaultCapacity: _config.DefaultCapacity,
                 maxSize: _config.MaxCapacity
             );

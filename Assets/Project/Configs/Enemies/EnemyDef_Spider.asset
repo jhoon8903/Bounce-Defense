@@ -17,4 +17,5 @@ MonoBehaviour:
   blockSprite: {fileID: 21300000, guid: 297229887d69644a08df83c5954d9792, type: 3}
   mobSprite: {fileID: 21300000, guid: 420682ab856f1458d8ea8ef19debad81, type: 3}
   baseHp: 24
-  descentSpeed: 0.6
+  breachDamage: 10
+  descentSpeed: 0.5

@@ -12,13 +12,11 @@ namespace Game.Core.Pool
         [SerializeField] private GameObject prefab;
 
         [Header("Setting")]
-        [SerializeField] private bool collectionCheck;
         [SerializeField] [Min(1)] private int defaultCapacity = 10;
         [SerializeField] [Min(1)] private int maxCapacity = 100;
 
         public string PoolName => poolName;
         public GameObject Prefab => prefab;
-        public bool CollectionCheck => collectionCheck;
         public int DefaultCapacity => defaultCapacity;
         public int MaxCapacity => maxCapacity;
 

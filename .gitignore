@@ -49,3 +49,9 @@ Thumbs.db
 sysinfo.txt
 SpikeLog.txt
 crashlytics-build.properties
+
+# ── 서드파티 에셋팩 (저장소 미포함 · 각자 임포트) ─────────
+/Assets/JMO Assets/
+/Assets/JMO Assets.meta
+/Assets/Layer Lab/
+/Assets/Layer Lab.meta
