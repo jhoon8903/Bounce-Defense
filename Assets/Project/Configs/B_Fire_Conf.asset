@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallConfig
   poolName: B_Fire
   prefab: {fileID: 2683892021315611478, guid: 719d0d77952a4499f850dd51d37ebc19, type: 3}
-  collectionCheck: 0
   defaultCapacity: 3
   maxCapacity: 3
-  critRate: 0
-  critDamage: 1.5
+  sourceType: 1
+  speed: 12
+  radius: 0.15
   damagePerLevel:
   - 21
   - 24

@@ -8,7 +8,7 @@ namespace Game.Runtime.Enemy
     // 적 뷰: 돌 타일(block) + 위 몹 스프라이트 + 콜라이더(볼 피격 대상) + HP 숫자.
     // IDamageable로서 볼 데미지를 받되, 실제 처리(HP감산/사망/디스폰)는 컨트롤러로 포워드(뷰는 dumb 렌더러+브리지).
     [DisallowMultipleComponent]
-    public sealed class EnemyView : BaseView<EnemyModel>, IDamageable
+    public sealed class EnemyView : BaseView<EnemyModel>, IDamageable, IStatusReceiver
     {
         [SerializeField] private SpriteRenderer blockRenderer; // 돌 타일(콜라이더 몸체와 정렬)
         [SerializeField] private SpriteRenderer mobRenderer;   // 위에 올라가는 몬스터(순수 비주얼)
@@ -18,6 +18,13 @@ namespace Game.Runtime.Enemy
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
 
         private System.Action<EnemyView, int> _damageSink;
+        private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
+
+        // 히트 화이트 플래시(SpriteHitFlash 셰이더). MaterialPropertyBlock으로 렌더러별 주입(제로할당·공유머티리얼 무변경).
+        private MaterialPropertyBlock _flashMpb;
+        private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
+        private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
+        private static readonly Color FlashWhite = Color.white;
         private Vector3 _mobBaseScale = Vector3.one; // 스쿼시 기준(프리팹 몹 스케일이 1이 아닐 수 있어 캡처)
         private bool _mobBaseCaptured;
         private CanvasGroup _hpCanvasGroup;
@@ -26,6 +33,7 @@ namespace Game.Runtime.Enemy
         private bool _hpBarBaseCaptured;
 
         public void SetDamageSink(System.Action<EnemyView, int> sink) => _damageSink = sink;
+        public void SetBurnSink(System.Action<EnemyView, float, float, int> sink) => _burnSink = sink;
         
         public void SetFootprintSize(Vector2 worldSize)
         {
@@ -173,10 +181,26 @@ namespace Game.Runtime.Enemy
         // IDamageable: 볼 → DamageResolver → 여기. 실제 처리(HP감산/사망/디스폰)는 컨트롤러로 포워드.
         public void ApplyDamage(int amount) => _damageSink?.Invoke(this, amount);
 
+        // IStatusReceiver: 볼 모듈(Fire) → 여기. 상태이상 부여는 컨트롤러(EnemyStatusSimulator)로 포워드.
+        public void ApplyBurn(float durationSeconds, float damagePerSecond, int maxStacks) =>
+            _burnSink?.Invoke(this, durationSeconds, damagePerSecond, maxStacks);
+
+        // 히트 플래시량(0=원색, 1=완전 흰색). HitFeedbackController가 매 틱 감쇠시키며 호출. 블록+몹 함께(음영 제외).
+        public void SetHitFlash(float amount)
+        {
+            _flashMpb ??= new MaterialPropertyBlock();
+            _flashMpb.SetColor(FlashColorId, FlashWhite);
+            _flashMpb.SetFloat(FlashAmountId, Mathf.Clamp01(amount));
+            if (blockRenderer != null) blockRenderer.SetPropertyBlock(_flashMpb);
+            if (mobRenderer != null) mobRenderer.SetPropertyBlock(_flashMpb);
+        }
+
         public override void OnInactive()
         {
             base.OnInactive(); // BaseView가 모델 언바인드 + null
             _damageSink = null;
+            _burnSink = null;
+            SetHitFlash(0f); // 풀 재사용 대비 플래시 원복(고스트 방지 최종 보증)
             HideVisuals();
             if (shadowRenderer != null) shadowRenderer.enabled = false;
             SetSquash(0f); // 몹 스쿼시 복구

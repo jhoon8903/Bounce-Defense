@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallConfig
   poolName: B_Laser
   prefab: {fileID: 8562401442799765572, guid: 23a3f7997a219407788e20f6335c75dd, type: 3}
-  collectionCheck: 0
   defaultCapacity: 3
   maxCapacity: 3
-  critRate: 0
-  critDamage: 1.5
+  sourceType: 3
+  speed: 12
+  radius: 0.15
   damagePerLevel:
   - 11
   - 15

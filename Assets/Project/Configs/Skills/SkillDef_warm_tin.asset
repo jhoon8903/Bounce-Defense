@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: warm_tin
   displayName: "\uB530\uB73B\uD55C \uC591\uCCA0 \uC2EC\uC7A5"
   category: 1
+  effectKind: 6
   icon: {fileID: 21300000, guid: c4d6fa50cf41f4ef8b89041d8d7e857e, type: 3}
   maxLevel: 3
   descriptionPerLevel:

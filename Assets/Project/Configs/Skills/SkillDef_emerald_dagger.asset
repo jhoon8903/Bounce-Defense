@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: emerald_dagger
   displayName: "\uC5D0\uBA54\uB784\uB4DC \uB2E8\uAC80"
   category: 1
+  effectKind: 9
   icon: {fileID: 21300000, guid: 764b0a277a983483cb22490d1d9ca253, type: 3}
   maxLevel: 3
   descriptionPerLevel:

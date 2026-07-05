@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1069aa1242a3545739013362214fa441, type: 3}
   m_Name: B_Normal_Conf
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallConfig
-  poolName: Ball_Normal
+  poolName: B_Normal
   prefab: {fileID: 7737291358562331907, guid: aa038d9194cc8492aa19fcce14aec652, type: 3}
-  collectionCheck: 0
   defaultCapacity: 5
   maxCapacity: 5
-  critRate: 0
-  critDamage: 1.5
+  sourceType: 0
+  speed: 12
+  radius: 0.15
   damagePerLevel:
   - 8

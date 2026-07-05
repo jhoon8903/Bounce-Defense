@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: fire_ball
   displayName: "\uD30C\uC774\uC5B4 \uBCFC"
   category: 0
+  effectKind: 1
   icon: {fileID: 21300000, guid: 997bae08b7506438fb9d1bfb7733467b, type: 3}
   maxLevel: 3
   descriptionPerLevel:

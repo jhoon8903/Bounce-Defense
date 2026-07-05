@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallConfig
   poolName: B_Ghost
   prefab: {fileID: 8239759220413425757, guid: 8cceaead7823c4af4bc8d4bc20fbd102, type: 3}
-  collectionCheck: 0
   defaultCapacity: 3
   maxCapacity: 3
-  critRate: 0
-  critDamage: 1.5
+  sourceType: 4
+  speed: 12
+  radius: 0.15
   damagePerLevel:
   - 14
   - 21

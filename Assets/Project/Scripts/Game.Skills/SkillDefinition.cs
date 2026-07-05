@@ -12,6 +12,9 @@ namespace Game.Skills
         [SerializeField] private string skillId = "skill_id";
         [SerializeField] private string displayName = "Skill";
         [SerializeField] private SkillCategory category = SkillCategory.Active;
+        // 런타임 동작 식별자(Phase 4). SkillModuleFactory가 이 값으로 볼 타입/모듈/패시브 모디파이어를 만든다.
+        // None = 아직 동작 미배정(카드 표시만). 액티브는 FireBall 등, 패시브는 WarmTin 등으로 인스펙터에서 지정.
+        [SerializeField] private SkillEffectKind effectKind = SkillEffectKind.None;
         [SerializeField] private Sprite icon;
         [SerializeField] [Min(1)] private int maxLevel = 3;
 
@@ -23,6 +26,7 @@ namespace Game.Skills
         public string SkillId => skillId;
         public string DisplayName => displayName;
         public SkillCategory Category => category;
+        public SkillEffectKind EffectKind => effectKind;
         public Sprite Icon => icon;
         public int MaxLevel => Mathf.Max(1, maxLevel);
         public bool HasBallDamage => ballDamagePerLevel != null && ballDamagePerLevel.Length > 0;

@@ -469,6 +469,14 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a2214defdc1384c949441970e7265354, type: 2}
   - {fileID: 11400000, guid: 3ad4d84a22df14083acc425bccf35eaa, type: 2}
   - {fileID: 11400000, guid: 13fc7b0afbfa54d7f9867f0c9210a20f, type: 2}
+  - {fileID: 11400000, guid: edb489e1856204c23a79487af84dabcc, type: 2}
+  ballConfigs:
+  - {fileID: 11400000, guid: 995604bac7a5b435e84365aa37a382a4, type: 2}
+  - {fileID: 11400000, guid: a2214defdc1384c949441970e7265354, type: 2}
+  - {fileID: 11400000, guid: 478f1313f01304e559358848d09ad428, type: 2}
+  - {fileID: 11400000, guid: a5872f3a4a5854ed2826ef91b510371f, type: 2}
+  - {fileID: 11400000, guid: b49860d4f3ea742bdaefeae8ed0bd0cf, type: 2}
+  - {fileID: 11400000, guid: 3ad4d84a22df14083acc425bccf35eaa, type: 2}
   poolRoot: {fileID: 1977317806}
   launchController: {fileID: 548187059}
   gridConfig: {fileID: 0}
@@ -1127,7 +1135,7 @@ Transform:
   m_GameObject: {fileID: 2070283268}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.40457, y: 0.5191, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

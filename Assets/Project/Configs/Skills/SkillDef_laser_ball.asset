@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: laser_ball
   displayName: "\uB808\uC774\uC800\uBCFC"
   category: 0
+  effectKind: 3
   icon: {fileID: 21300000, guid: f2e87d85a71544e8fa700660c1e701fa, type: 3}
   maxLevel: 3
   descriptionPerLevel:

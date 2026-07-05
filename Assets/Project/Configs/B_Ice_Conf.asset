@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.BallConfig
   poolName: B_Ice
   prefab: {fileID: 5446193268174132386, guid: 021353674b77b4a6cbbae8cde76a11bf, type: 3}
-  collectionCheck: 0
   defaultCapacity: 3
   maxCapacity: 3
-  critRate: 0
-  critDamage: 1.5
+  sourceType: 2
+  speed: 12
+  radius: 0.15
   damagePerLevel:
   - 25
   - 37

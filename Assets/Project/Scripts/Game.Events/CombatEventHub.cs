@@ -1,4 +1,6 @@
 using System;
+using Game.Runtime.Enemy;
+using UnityEngine;
 
 namespace Game.Events
 {
@@ -8,8 +10,11 @@ namespace Game.Events
     {
         public event Action OnKill;
         public event Action<int> OnBreach; // int = 침범한 적의 베이스 피해량
+        // 피격 피드백(HitFeedbackController 구독): view=플래시 대상(살상타면 무모델→스킵), pos=숫자 위치(캡처됨), amount, isCrit.
+        public event Action<EnemyView, Vector2, int, bool> OnHit;
 
         public void RaiseKill() => OnKill?.Invoke();
         public void RaiseBreach(int breachDamage) => OnBreach?.Invoke(breachDamage);
+        public void RaiseHit(EnemyView view, Vector2 pos, int amount, bool isCrit) => OnHit?.Invoke(view, pos, amount, isCrit);
     }
 }

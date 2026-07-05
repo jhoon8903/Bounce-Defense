@@ -8,6 +8,7 @@ using Game.Runtime.Combat;
 using Game.Runtime.Enemy;
 using Game.Runtime.Grid;
 using Game.Runtime.Progression;
+using Game.Runtime.Skills;
 using Game.Runtime.Stage;
 using Game.Runtime.UI;
 using Game.Skills;
@@ -20,7 +21,8 @@ namespace Game.Runtime.Bootstrap
     public sealed class GameLifetimeScope : LifetimeScope
     {
         [Header("Pool")]
-        [SerializeField] private PoolConfiguration[] poolConfigs;
+        [SerializeField] private PoolConfiguration[] poolConfigs; // EnemyView 등 GamePool 대상
+        [SerializeField] private BallConfig[] ballConfigs;         // 볼 타입별 config(각자 프리팹) — BallFactory가 타입별 풀 소유
         [SerializeField] private Transform poolRoot;
 
         [Header("Scene Refs (RegisterComponent로 주입)")]
@@ -44,18 +46,24 @@ namespace Game.Runtime.Bootstrap
         {
             builder.RegisterInstance(new GameClock()).As<IClock>();
             builder.RegisterInstance(new GamePool(poolConfigs)).As<IPool>();
-            builder.Register<DamageResolver>(Lifetime.Singleton);
+            builder.Register<ModifierRegistry>(Lifetime.Singleton); // 패시브 데미지 모디파이어 컬렉션(SkillRuntime이 갱신)
+            builder.Register<DamageResolver>(Lifetime.Singleton);   // ctor: ModifierRegistry + IRandom 자동주입
             builder.Register<CombatEventHub>(Lifetime.Singleton);
-            BallConfig ballConfig = null;
-            if (poolConfigs != null)
+            builder.Register<HitFeedbackController>(Lifetime.Singleton); // 데미지 숫자(풀) + 적 화이트 플래시
+            // 볼 타입별 config(각자 프리팹). BallFactory가 타입별 Pool<BallView>를 소유(§11-9).
+            // 하나(Normal 우선)는 BallController 속도/반경/수집속도용으로도 등록.
+            BallConfig normalConfig = null;
+            if (ballConfigs != null)
             {
-                for (int i = 0; i < poolConfigs.Length; i++)
+                for (int i = 0; i < ballConfigs.Length; i++)
                 {
-                    if (poolConfigs[i] is BallConfig bc) { ballConfig = bc; break; }
+                    if (ballConfigs[i] == null) continue;
+                    if (normalConfig == null) normalConfig = ballConfigs[i];
+                    if (ballConfigs[i].SourceType == BallSourceType.Normal) { normalConfig = ballConfigs[i]; break; }
                 }
             }
-            builder.RegisterInstance(ballConfig != null ? ballConfig : ScriptableObject.CreateInstance<BallConfig>());
-            builder.Register<IBallFactory, BallFactory>(Lifetime.Singleton);
+            builder.RegisterInstance(normalConfig != null ? normalConfig : ScriptableObject.CreateInstance<BallConfig>());
+            builder.Register<IBallFactory>(container => new BallFactory(ballConfigs, poolRoot ? poolRoot : transform, container), Lifetime.Singleton);
             builder.Register<BallController>(Lifetime.Singleton);
 
             // Grid: BallConfig와 동일하게 인스턴스 주입 + 싱글톤 컨트롤러. 풀에서 꺼내는 게 없어 pool.Activate 불필요.
@@ -86,6 +94,9 @@ namespace Game.Runtime.Bootstrap
             }, Lifetime.Singleton);
             builder.Register<CardDrawService>(Lifetime.Singleton);
 
+            // 스킬 런타임: 로드아웃 → 볼 로스터 + 패시브 모디파이어 브리지(드래프트 유무와 무관, 미획득 시 노멀 5).
+            builder.Register<SkillRuntime>(Lifetime.Singleton);
+
             bool draftReady = levelProgressView != null && cardSelectView != null;
             if (draftReady)
             {
@@ -97,8 +108,15 @@ namespace Game.Runtime.Bootstrap
             builder.RegisterBuildCallback(container =>
             {
                 IPool pool = container.Resolve<IPool>();
-                pool.Activate(poolRoot ? poolRoot : transform, typeof(BallView), typeof(EnemyView));
+                // 볼은 BallFactory가 타입별 풀 소유 → GamePool은 EnemyView + DamageTextView 담당(BallView 제외, §11-9).
+                pool.Activate(poolRoot ? poolRoot : transform, typeof(EnemyView), typeof(DamageTextView));
                 container.Resolve<BallController>().Initialize();
+
+                // 스킬 런타임 배선: 로드아웃 구독 + 초기 로스터(노멀 5) 푸시. BallController 초기화 직후.
+                container.Resolve<SkillRuntime>().Initialize();
+
+                // 피격 피드백(데미지 숫자 + 화이트 플래시): OnHit + OnTick 구독. 풀 활성화 후.
+                container.Resolve<HitFeedbackController>().Initialize();
 
                 // Grid: 원점(씬 Grid 앵커)을 Initialize 전에 주입 — BallController.SetCollectTarget 패턴과 동일.
                 GridController grid = container.Resolve<GridController>();

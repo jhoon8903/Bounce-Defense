@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: magic_mirror
   displayName: "\uB9C8\uBC95 \uAC70\uC6B8"
   category: 1
+  effectKind: 7
   icon: {fileID: 21300000, guid: 8225eeda4d7324a52910834d05399977, type: 3}
   maxLevel: 3
   descriptionPerLevel:

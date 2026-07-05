@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Mvc;
 using Game.Events;
@@ -19,6 +20,7 @@ namespace Game.Runtime.Enemy
         private readonly IClock _clock;
         private readonly GridController _grid;
         private readonly CombatEventHub _hub;
+        private readonly DamageResolver _resolver;
 
         private readonly Dictionary<string, EnemyModel> _models = new();
         private readonly Dictionary<string, EnemyView> _views = new();
@@ -27,15 +29,18 @@ namespace Game.Runtime.Enemy
 
         private readonly EnemyEntranceChoreographer _entrance;
         private readonly EnemyDescentSimulator _descent;
+        private readonly EnemyStatusSimulator _status;
 
-        public EnemyController(IEnemyFactory factory, IClock clock, GridController grid, CombatEventHub hub)
+        public EnemyController(IEnemyFactory factory, IClock clock, GridController grid, CombatEventHub hub, DamageResolver resolver)
         {
             _factory = factory;
             _clock = clock;
             _grid = grid;
             _hub = hub;
+            _resolver = resolver;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
+            _status = new EnemyStatusSimulator(ApplyBurnDamage);
         }
 
         protected override void OnInitialize() => _clock.OnFixedTick += OnClockFixedTick;
@@ -74,6 +79,7 @@ namespace Game.Runtime.Enemy
 
             view.SetFootprintSize(placement.WorldSize);
             view.SetDamageSink(HandleDamage);
+            view.SetBurnSink(HandleBurn);
 
             _models[id] = model;
             _views[id] = view;
@@ -98,11 +104,32 @@ namespace Game.Runtime.Enemy
             Despawn(model.Id);
         }
 
+        // 볼 모듈(Fire) → EnemyView.ApplyBurn → 여기. 상태 시뮬레이터에 번 부여(독립타이머 스택·캡).
+        private void HandleBurn(EnemyView view, float duration, float dps, int maxStacks)
+        {
+            if (view == null) return;
+            EnemyModel model = view.Model;
+            if (model == null || model.IsDead || model.IsEntering) return;
+            _status.ApplyBurn(model.Id, duration, dps, maxStacks);
+        }
+
+        // 번 초당 틱: 2차 데미지(flat·무크리·무버프)를 동일 DamageResolver로 적용 → 숫자표기·사망 이벤트 통일.
+        // Resolve → view.ApplyDamage → HandleDamage 경로라 사망 시 RaiseKill·디스폰(상태도 정리)이 그대로 발동.
+        private void ApplyBurnDamage(string id, float dps)
+        {
+            if (_resolver == null || !_views.TryGetValue(id, out EnemyView view) || view.Model == null) return;
+            Vector2 pos = view.Model.Position;                 // Resolve 전 캡처(살상 번틱 디스폰 대비)
+            HitContext ctx = HitContext.Secondary(view, BallSourceType.Fire, DamageKind.Burn, dps);
+            _resolver.Resolve(ctx);
+            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit); // 번 = 항상 흰색
+        }
+
         // ---- IClock 틱: 등장 연출(입장 중) → 연속 하강(입장 완료) ----
         protected override void OnFixedTick(float fixedDeltaTime)
         {
             _entrance.Tick(fixedDeltaTime);
             _descent.Tick(fixedDeltaTime);
+            _status.Tick(fixedDeltaTime); // 번 감쇠 + 초당 데미지(사망 시 디스폰이 상태도 정리)
         }
 
         // 하강 시뮬레이터가 방어선 침범을 보고 → 이벤트 발화(StageController가 베이스 HP 감소) 후 디스폰.
@@ -119,6 +146,7 @@ namespace Game.Runtime.Enemy
             _views.TryGetValue(id, out EnemyView view);
             if (_handles.TryGetValue(id, out int handle)) _grid.RemoveBlock(handle);
             _entrance.Remove(id);
+            _status.Remove(id);
             _factory.Release(model, view);
             _models.Remove(id);
             _views.Remove(id);

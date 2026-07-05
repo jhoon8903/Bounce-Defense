@@ -15,6 +15,7 @@ MonoBehaviour:
   skillId: ice_ball
   displayName: "\uC544\uC774\uC2A4\uBCFC"
   category: 0
+  effectKind: 2
   icon: {fileID: 21300000, guid: 99eed861e6e8a49a6aefc7a2bfeda208, type: 3}
   maxLevel: 3
   descriptionPerLevel:
