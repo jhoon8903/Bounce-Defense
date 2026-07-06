@@ -18,8 +18,4 @@ MonoBehaviour:
   maxCapacity: 3
   sourceType: 4
   speed: 12
-  radius: 0.15
-  damagePerLevel:
-  - 14
-  - 21
-  - 28
+  radius: 0.26

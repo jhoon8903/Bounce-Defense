@@ -21,7 +21,7 @@ namespace Game.Runtime.Combat
         private const float Overshoot  = 1.50f;
         private const float StartScale = 0.50f;
         private const float EndScale   = 0.82f;  // 마지막 축소
-        private const float CritScale  = 2f;  // 크리 크기 배수
+        private const float CritScale  = 1.7f;  // 크리 크기 배수
 
         private static readonly Color NormalColor = Color.white;
         private static readonly Color CritColor = new(1f, 0.28f, 0.22f, 1f);

@@ -13,36 +13,29 @@ namespace Game.Runtime.Enemy
         // 등장 단계. Entering = 낙하/덜컹 중(무적, 하강 제외). Active = 전투/하강 개시.
         public enum SpawnPhase { Entering, Active }
 
-        private string _id;
-        private EnemyDefinition _definition;
-        private int _hp;
-        private int _maxHp;
-        private Vector2 _position;
-        private bool _isDead;
         private SpawnPhase _phase = SpawnPhase.Active;
-        private float _landedY; // 착지 셀 중심 Y = 하강 시작점(입장 중 이웃의 하강 floor 기준)
         private float _freezeSlow; // 냉동 하강 감속률(0=없음, 0.20=20% 감속). EnemyStatusSimulator가 세팅.
+        public string Id { get; private set; }
+        public EnemyDefinition Definition { get; private set; }
+        public int Hp { get; private set; }
+        public int MaxHp { get; private set; }
+        public Vector2 Position { get; private set; }
+        public bool IsDead { get; private set; }
 
-        public string Id => _id;
-        public EnemyDefinition Definition => _definition;
-        public int Hp => _hp;
-        public int MaxHp => _maxHp;
-        public Vector2 Position => _position;
-        public bool IsDead => _isDead;
         // 하강속도 = 정의값 × (1 - 냉동슬로우). 냉동 중이면 그만큼 느리게 내려온다(Ice §199).
-        public float DescentSpeed => (_definition != null ? _definition.DescentSpeed : 0f) * (1f - _freezeSlow);
-        public Footprint Footprint => _definition != null ? _definition.Footprint : Footprint.Size1x1;
+        public float DescentSpeed => (Definition != null ? Definition.DescentSpeed : 0f) * (1f - _freezeSlow);
+        public Footprint Footprint => Definition != null ? Definition.Footprint : Footprint.Size1x1;
         public bool IsEntering => _phase == SpawnPhase.Entering;
-        public float LandedY => _landedY;
+        public float LandedY { get; private set; }
 
         public void Initialize(string id, EnemyDefinition definition, Vector2 position)
         {
-            _id = id;
-            _definition = definition;
-            _maxHp = definition != null ? definition.BaseHp : 1;
-            _hp = _maxHp;
-            _position = position;
-            _isDead = false;
+            Id = id;
+            Definition = definition;
+            MaxHp = definition != null ? definition.BaseHp : 1;
+            Hp = MaxHp;
+            Position = position;
+            IsDead = false;
             _freezeSlow = 0f; // 풀 재사용 대비 냉동 리셋
             _phase = SpawnPhase.Active; // 풀 재사용 대비 리셋. Spawn이 곧 BeginEntering으로 덮는다.
             Raise();
@@ -52,7 +45,7 @@ namespace Game.Runtime.Enemy
         public void BeginEntering(float landedY)
         {
             _phase = SpawnPhase.Entering;
-            _landedY = landedY;
+            LandedY = landedY;
         }
 
         public void MarkActive() => _phase = SpawnPhase.Active;
@@ -61,16 +54,16 @@ namespace Game.Runtime.Enemy
         // 등장 중(Entering)엔 무적 — 낙하하는 몹은 아직 전장에 없다.
         public void TakeDamage(int amount)
         {
-            if (_isDead || amount <= 0 || _phase == SpawnPhase.Entering) return;
-            _hp = Mathf.Max(0, _hp - amount);
-            if (_hp == 0) _isDead = true;
+            if (IsDead || amount <= 0 || _phase == SpawnPhase.Entering) return;
+            Hp = Mathf.Max(0, Hp - amount);
+            if (Hp == 0) IsDead = true;
             Raise(); // HP 숫자 갱신
         }
 
         public void SetPosition(Vector2 position)
         {
-            if (_position == position) return;
-            _position = position;
+            if (Position == position) return;
+            Position = position;
             Raise();
         }
 
