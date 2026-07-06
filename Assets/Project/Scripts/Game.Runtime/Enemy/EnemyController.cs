@@ -29,7 +29,9 @@ namespace Game.Runtime.Enemy
 
         private readonly EnemyEntranceChoreographer _entrance;
         private readonly EnemyDescentSimulator _descent;
+        private readonly BreachChoreographer _breach;
         private readonly EnemyStatusSimulator _status;
+        private Vector2 _defensePoint = new Vector2(0f, -6.70f); // 침범 연출 돌진 목표(캐릭터). GameLifetimeScope가 주입.
 
         // Last Match(패시브, §212): 킬 시 반경 폭발. SkillRuntime이 로드아웃 변경 시 SetLastMatch로 값 주입(0=미보유).
         private const int MaxExplosionDepth = 4; // 체인 허용하되 무한 재귀 방지(§257 depth 가드)
@@ -46,6 +48,7 @@ namespace Game.Runtime.Enemy
             _resolver = resolver;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
+            _breach = new BreachChoreographer(OnBreachImpact);
             _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow, SetEnemyBurning, SetEnemyFrozen);
         }
 
@@ -164,7 +167,7 @@ namespace Game.Runtime.Enemy
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
                 _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드, hits 지역이라 안전)
-                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero, BallSourceType.Normal); // 폭발 = 흰색·무방향(반동·임팩트 없음)
+                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero, BallSourceType.Normal, ctx.Kind); // 폭발 = 흰색·무방향(반동·임팩트 없음)
             }
 
             _explosionDepth--;
@@ -214,7 +217,7 @@ namespace Game.Runtime.Enemy
             Vector2 pos = view.Model.Position;                 // Resolve 전 캡처(살상 번틱 디스폰 대비)
             HitContext ctx = HitContext.Secondary(view, BallSourceType.Fire, DamageKind.Burn, dps);
             _resolver.Resolve(ctx);
-            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, BallSourceType.Fire); // 번 = 흰색·무방향(반동·임팩트 없음)
+            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, BallSourceType.Fire, ctx.Kind); // 번 = 흰색·무방향(반동·임팩트 없음)
         }
 
         // ---- IClock 틱: 등장 연출(입장 중) → 연속 하강(입장 완료) ----
@@ -222,15 +225,34 @@ namespace Game.Runtime.Enemy
         {
             _entrance.Tick(fixedDeltaTime);
             _descent.Tick(fixedDeltaTime);
+            _breach.Tick(fixedDeltaTime);  // 침범 연출(부들부들→돌진→충격)
             _status.Tick(fixedDeltaTime); // 번 감쇠 + 초당 데미지(사망 시 디스폰이 상태도 정리)
         }
 
-        // 하강 시뮬레이터가 방어선 침범을 보고 → 이벤트 발화(StageController가 베이스 HP 감소) 후 디스폰.
+        // 방어선 도달 → 즉시 침범 대신 침범 연출 시작(부들부들→돌진→충격). 격자 셀 해제(위 적 진행 허용).
         private void OnDescentBreach(string id, int breachDamage)
         {
-            _hub?.RaiseBreach(breachDamage);
+            if (_handles.TryGetValue(id, out int h)) { _grid.RemoveBlock(h); _handles.Remove(id); }
+            if (_models.TryGetValue(id, out EnemyModel m) && _views.TryGetValue(id, out EnemyView v))
+            {
+                m.BeginBreaching();
+                v.SetColliderEnabled(false); // 달려들 때 볼 적중 차단(관통) — Daniel
+                _breach.Begin(id, m, v, breachDamage, _defensePoint);
+            }
+            else Despawn(id);
+        }
+
+        // 침범 연출 완료(캐릭터 충격) → 붉은 플로팅 숫자 + 피 연출 + 베이스 HP 감소 + 디스폰.
+        private void OnBreachImpact(string id, int breachDamage, Vector2 impactPos)
+        {
+            _hub?.RaiseHit(null, impactPos, breachDamage, true, Vector2.zero, BallSourceType.Normal, Game.Combat.DamageKind.Direct); // 캐릭터 피격 = 붉은 숫자(view null → 텍스트만)
+            _hub?.RaiseBaseHit(impactPos);   // 피 파티클(config 배선 시)
+            _hub?.RaiseBreach(breachDamage); // 베이스 HP 감소(+사망 시 실패 시퀀스)
             Despawn(id);
         }
+
+        // 캐릭터(방어선) 월드 좌표 주입 — 침범 연출 돌진 목표.
+        public void SetDefensePoint(Vector2 point) => _defensePoint = point;
 
         // ---- 디스폰 ----
         public void Despawn(string id)
@@ -239,6 +261,7 @@ namespace Game.Runtime.Enemy
             _views.TryGetValue(id, out EnemyView view);
             if (_handles.TryGetValue(id, out int handle)) _grid.RemoveBlock(handle);
             _entrance.Remove(id);
+            _breach.Remove(id);
             _status.Remove(id);
             _factory.Release(model, view);
             _models.Remove(id);

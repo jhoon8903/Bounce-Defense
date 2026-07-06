@@ -157,6 +157,12 @@ namespace Game.Runtime.Enemy
             mobRenderer.transform.localPosition = _mobBasePos + (Vector3)localOffset;
         }
 
+        // 침범 연출 중 볼 적중 차단(스펙 #3, Daniel): 콜라이더 off → 볼이 관통(반사·데미지 없음).
+        public void SetColliderEnabled(bool on)
+        {
+            if (boxCollider != null) boxCollider.enabled = on;
+        }
+
         private void EnsureShadow()
         {
             if (shadowRenderer != null) return;

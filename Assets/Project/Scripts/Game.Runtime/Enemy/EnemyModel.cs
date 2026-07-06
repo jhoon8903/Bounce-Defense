@@ -11,7 +11,7 @@ namespace Game.Runtime.Enemy
     public sealed class EnemyModel : Observable
     {
         // 등장 단계. Entering = 낙하/덜컹 중(무적, 하강 제외). Active = 전투/하강 개시.
-        public enum SpawnPhase { Entering, Active }
+        public enum SpawnPhase { Entering, Active, Breaching }
 
         private SpawnPhase _phase = SpawnPhase.Active;
         private float _freezeSlow; // 냉동 하강 감속률(0=없음, 0.20=20% 감속). EnemyStatusSimulator가 세팅.
@@ -26,6 +26,7 @@ namespace Game.Runtime.Enemy
         public float DescentSpeed => (Definition != null ? Definition.DescentSpeed : 0f) * (1f - _freezeSlow);
         public Footprint Footprint => Definition != null ? Definition.Footprint : Footprint.Size1x1;
         public bool IsEntering => _phase == SpawnPhase.Entering;
+        public bool IsBreaching => _phase == SpawnPhase.Breaching; // 방어선 침범 연출 중(하강 제외, 이동은 BreachChoreographer)
         public float LandedY { get; private set; }
 
         public void Initialize(string id, EnemyDefinition definition, Vector2 position, float hpScale = 1f)
@@ -50,12 +51,13 @@ namespace Game.Runtime.Enemy
         }
 
         public void MarkActive() => _phase = SpawnPhase.Active;
+        public void BeginBreaching() => _phase = SpawnPhase.Breaching;
 
         // 데미지 적용(HP 상태만). 사망 판정은 여기서, 킬 이벤트·디스폰은 컨트롤러가 IsDead를 보고 처리.
         // 등장 중(Entering)엔 무적 — 낙하하는 몹은 아직 전장에 없다.
         public void TakeDamage(int amount)
         {
-            if (IsDead || amount <= 0 || _phase == SpawnPhase.Entering) return;
+            if (IsDead || amount <= 0 || _phase == SpawnPhase.Entering || _phase == SpawnPhase.Breaching) return; // 등장·침범 중 무적
             Hp = Mathf.Max(0, Hp - amount);
             if (Hp == 0) IsDead = true;
             Raise(); // HP 숫자 갱신

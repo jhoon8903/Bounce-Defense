@@ -65,7 +65,7 @@ namespace Game.Runtime.Combat
 
         // ---- OnHit: 숫자 스폰 + 플래시/움찔 시작 ----
         // sourceType은 임팩트 파티클(CombatVfxController) 전용 — 여기선 미사용(피격 반응만 담당).
-        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir, BallSourceType sourceType)
+        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir, BallSourceType sourceType, DamageKind kind)
         {
             if (amount > 0)
             {

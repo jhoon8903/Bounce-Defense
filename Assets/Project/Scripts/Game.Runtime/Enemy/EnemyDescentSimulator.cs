@@ -38,7 +38,7 @@ namespace Game.Runtime.Enemy
             if (_models.Count == 0) return;
             _order.Clear();
             foreach (KeyValuePair<string, EnemyModel> kv in _models)
-                if (!kv.Value.IsEntering) _order.Add(kv.Key);
+                if (!kv.Value.IsEntering && !kv.Value.IsBreaching) _order.Add(kv.Key);
             if (_order.Count == 0) return;
             _order.Sort(CompareByRowDescending);
             float cellSize = _grid.CellSize;
@@ -46,7 +46,7 @@ namespace Game.Runtime.Enemy
             for (int i = 0; i < _order.Count; i++)
             {
                 string id = _order[i];
-                if (!_models.TryGetValue(id, out EnemyModel model) || model.IsEntering) continue;
+                if (!_models.TryGetValue(id, out EnemyModel model) || model.IsEntering || model.IsBreaching) continue;
                 DescendOne(id, model, deltaTime, cellSize);
             }
         }

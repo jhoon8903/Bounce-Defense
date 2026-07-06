@@ -27,10 +27,12 @@ namespace Game.Runtime.Stage
         private int _waveIndex;
         private int _totalKills;
         private StageState _state = StageState.Idle;
+        private bool _defeatPending;     // 실패 연출 진행 중(중복 발화·추가 침범 차단)
 
         public BaseModel Base => _base;
         public StageState State => _state;
         public event System.Action<StageState> StateChanged; // 승/패 전이 시 결과 팝업이 구독
+        public event System.Action OnBaseDefeated; // 베이스 HP 0 → 캐릭터 분리 연출 게이트(끝나면 CompleteDefeat)
         public int WaveNumber => _waveIndex + 1;    // 1-based(HUD)
         public int WaveCount => _stage != null ? _stage.WaveCount : 0;
         public int TotalKills => _totalKills;
@@ -71,6 +73,7 @@ namespace Game.Runtime.Stage
             _base.Initialize(_stage != null ? _stage.BaseHp : 300);
             _waveIndex = 0;
             _totalKills = 0;
+            _defeatPending = false;
             SetState(_stage != null && _stage.WaveCount > 0 ? StageState.Playing : StageState.Won);
             if (_state == StageState.Playing) BeginWave(0);
         }
@@ -154,10 +157,19 @@ namespace Game.Runtime.Stage
 
         private void OnBreach(int breachDamage)
         {
-            if (_state != StageState.Playing) return;
+            if (_state != StageState.Playing || _defeatPending) return;
             _resolvedThisWave++;                 // 침범도 웨이브 해소로 집계
             _base.TakeDamage(breachDamage);
-            if (_base.IsDead) SetState(StageState.Lost); // 베이스 0 → 실패
+            if (!_base.IsDead) return;
+            // 베이스 0 → 실패. 캐릭터 분리 시퀀스가 배선됐으면 연출 후 CompleteDefeat, 아니면 즉시 Lost.
+            if (OnBaseDefeated != null) { _defeatPending = true; OnBaseDefeated.Invoke(); }
+            else SetState(StageState.Lost);
+        }
+
+        // 실패 시퀀스(캐릭터 분리) 완료 콜백 → 최종 Lost 전이(팝업 오픈).
+        public void CompleteDefeat()
+        {
+            if (_defeatPending && _state == StageState.Playing) SetState(StageState.Lost);
         }
     }
 }

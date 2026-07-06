@@ -28,6 +28,7 @@ namespace Game.Runtime.Bootstrap
         [SerializeField] private ImpactConfig clusterConfig;       // Cluster 분열 수류탄 폭발 config — 볼 타입 무관 단일 풀. 미배선 시 무연출.
         [SerializeField] private ImpactConfig deathConfig;         // 적 사망 돌 깨짐 config(#3) — 볼 타입 무관 단일 풀. 미배선 시 무연출.
         [SerializeField] private ImpactConfig laserConfig;         // Laser 행 빔 파티클 config(#7) — 볼 타입 무관 단일 풀. 미배선 시 빔 무연출.
+        [SerializeField] private ImpactConfig bloodConfig;         // 방어선 침범 피 연출 config(#3) — 미배선 시 무연출.
         [SerializeField] private Transform poolRoot;
 
         [Header("Scene Refs (RegisterComponent로 주입)")]
@@ -55,10 +56,11 @@ namespace Game.Runtime.Bootstrap
             builder.Register<ModifierRegistry>(Lifetime.Singleton); // 패시브 데미지 모디파이어 컬렉션(SkillRuntime이 갱신)
             builder.Register<DamageResolver>(Lifetime.Singleton);   // ctor: ModifierRegistry + IRandom 자동주입
             builder.Register<CombatEventHub>(Lifetime.Singleton);
+            builder.Register<DamageStats>(Lifetime.Singleton); // 볼(스킬)별 누적 데미지 집계(결과창 DTResult, 가산점)
             builder.Register<HitFeedbackController>(Lifetime.Singleton); // 데미지 숫자(풀) + 적 화이트 플래시
             // 전투 파티클 스포너: 볼 타입별 임팩트 풀 소유(BallFactory와 동일하게 config+poolRoot는 씬 주입 → 팩토리 람다).
             builder.Register<CombatVfxController>(container =>
-                new CombatVfxController(impactConfigs, explosionConfig, clusterConfig, deathConfig, laserConfig, poolRoot ? poolRoot : transform,
+                new CombatVfxController(impactConfigs, explosionConfig, clusterConfig, deathConfig, laserConfig, bloodConfig, poolRoot ? poolRoot : transform,
                     container.Resolve<IClock>(), container.Resolve<CombatEventHub>()), Lifetime.Singleton);
             BallConfig normalConfig = null;
             
@@ -101,6 +103,18 @@ namespace Game.Runtime.Bootstrap
             builder.RegisterInstance(stageDefinition != null ? stageDefinition : ScriptableObject.CreateInstance<StageDefinition>());
             builder.Register<StageController>(Lifetime.Singleton);
 
+            // 실패 시퀀스(#4): 베이스 0 → 캐릭터 분리 연출 → Lost. CharDeathView(씬)는 nullable(미배선=즉시 완료).
+            CharDeathView charDeathView = FindFirstObjectByType<CharDeathView>();
+            builder.Register(resolver => new DefeatSequenceController(
+                resolver.Resolve<StageController>(), resolver.Resolve<IClock>(), charDeathView), Lifetime.Singleton);
+
+            // 결과 뷰(Daniel UI): 성공 ClearView / 실패 DefeatedView. StateChanged 구독. 씬 nullable.
+            ClearView clearView = FindFirstObjectByType<ClearView>();
+            DefeatedView defeatedView = FindFirstObjectByType<DefeatedView>();
+            builder.Register(resolver => new ResultViewController(
+                resolver.Resolve<StageController>(), resolver.Resolve<IClock>(), clearView, defeatedView,
+                resolver.Resolve<DamageStats>()), Lifetime.Singleton);
+
             // Roguelike(Phase 3): 킬 XP 레벨업 → 3택 카드 드래프트. 순수 로직(로드아웃/드로우/레벨)은 asmdef,
             // 뷰는 씬 컴포넌트(RegisterComponent). 뷰/DB 미배선이면 드래프트 비활성(코어 루프는 그대로 동작).
             builder.RegisterInstance(new SystemRandom(rngSeed)).As<IRandom>(); // 시드 결정론
@@ -139,6 +153,7 @@ namespace Game.Runtime.Bootstrap
 
                 // 전투 파티클(타입별 임팩트): OnHit + OnTick 구독. 자체 타입별 풀 소유(GamePool 무관, pool.Activate 불필요).
                 container.Resolve<CombatVfxController>().Initialize();
+                container.Resolve<DamageStats>(); // 데미지 집계 시작(OnHit 구독)
 
                 // Char 비주얼 구동: OnTick 구독(조준 스무딩 + 발사 반동). 뷰/발사대 배선된 경우에만.
                 if (charReady) container.Resolve<CharController>().Initialize();
@@ -152,17 +167,19 @@ namespace Game.Runtime.Bootstrap
                 grid.Initialize();
 
                 // 적 컨트롤러는 그리드 준비 후 초기화(스폰 시 GridController 배치 권한을 사용).
-                container.Resolve<EnemyController>().Initialize();
+                EnemyController enemyController = container.Resolve<EnemyController>();
+                enemyController.Initialize();
+                enemyController.SetDefensePoint(launchController ? launchController.Origin : new Vector2(0f, -6.70f)); // 침범 연출 돌진 목표(캐릭터)
 
                 // 스테이지 컨트롤러는 적 컨트롤러 준비 후 초기화(초기화 시 웨이브 스폰이 시작된다).
                 StageController stageController = container.Resolve<StageController>();
                 stageController.Initialize();
+                container.Resolve<DefeatSequenceController>().Initialize(); // 실패 연출 게이트 구독
 
                 // 결과 UI(스펙 §5): HP 바(BaseModel 구독) + 승/패 결과 팝업(StateChanged 구독). 씬에 있으면 배선.
                 HpBarView hpBar = UnityEngine.Object.FindFirstObjectByType<HpBarView>();
                 if (hpBar) hpBar.Bind(stageController.Base);
-                ResultPopupView resultView = UnityEngine.Object.FindFirstObjectByType<ResultPopupView>();
-                if (resultView) container.Inject(resultView);
+                container.Resolve<ResultViewController>().Initialize(); // 결과 뷰(성공 ClearView / 실패 DefeatedView) 구독
 
                 // 조준 입력이 일시정지(드래프트/결과)를 알도록 IClock 주입 — 카드 클릭이 조준으로 새는 버그 방지.
                 AimController aim = UnityEngine.Object.FindFirstObjectByType<AimController>();
@@ -170,10 +187,6 @@ namespace Game.Runtime.Bootstrap
 
                 // 카드 드래프트: 킬→XP 구독 + 뷰 바인드. 뷰/DB가 씬에 배선된 경우에만 활성.
                 if (draftReady) container.Resolve<CardDraftController>().Initialize();
-
-                // 디버그 HUD(씬에 있으면) 주입 — 웨이브/베이스/상태 가시화.
-                StageHudView hud = UnityEngine.Object.FindFirstObjectByType<StageHudView>();
-                if (hud) container.Inject(hud);
             });
         }
     }

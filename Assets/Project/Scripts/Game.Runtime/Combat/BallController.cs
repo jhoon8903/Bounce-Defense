@@ -90,7 +90,7 @@ namespace Game.Runtime.Combat
                 Vector2 pos = occ is EnemyView ev && ev.Model != null ? ev.Model.Position : Vector2.zero;
                 HitContext ctx = HitContext.Secondary(occ, source, DamageKind.LaserRow, flatDamage);
                 _resolver.Resolve(ctx); // 무크리·무버프 flat, 동일 리졸버 → 사망 시 RaiseKill(Last Match 등 이어짐, §255)
-                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, source); // 행뎀=방향 없음(반동·임팩트 없음)
+                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, source, ctx.Kind); // 행뎀=방향 없음(반동·임팩트 없음)
             }
         }
 
@@ -248,7 +248,7 @@ namespace Game.Runtime.Combat
                 if (spec.DamageKind == DamageKind.Direct && _mirrorArmed.Remove(id))
                     ctx.BonusAdditivePercent = _mirrorPercent;
                 _resolver.Resolve(ctx);
-                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit, hits[i].Normal, spec.SourceType); // 직격 법선 → 움찔 반동 + 타입별 임팩트
+                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit, hits[i].Normal, spec.SourceType, ctx.Kind); // 직격 법선 → 움찔 반동 + 타입별 임팩트
                 spec.Module?.OnEnemyHit(target, ctx, this); // services = 이 컨트롤러(IBallEffectContext 파사드)
             }
         }

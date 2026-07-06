@@ -28,8 +28,9 @@ namespace Game.Runtime.Combat
         private readonly Pool<ImpactVfxView> _deathPool;     // 적 사망 = 돌 블럭 깨짐. 미배선 시 null → 무연출.
         private readonly Pool<LaserBeamView> _laserPool;     // Laser 행 빔(LineRenderer, 파티클 아님). 미배선 시 null → 무연출.
         private readonly List<LaserBeamView> _activeLasers = new(); // 활성 빔(ImpactVfxView와 타입 달라 별도 트래킹)
+        private readonly Pool<ImpactVfxView> _bloodPool;     // 방어선 침범 피 연출(#3). 미배선 시 null → 무연출.
 
-        public CombatVfxController(IEnumerable<ImpactConfig> impactConfigs, ImpactConfig explosionConfig, ImpactConfig clusterConfig, ImpactConfig deathConfig, ImpactConfig laserConfig, Transform poolRoot, IClock clock, CombatEventHub hub)
+        public CombatVfxController(IEnumerable<ImpactConfig> impactConfigs, ImpactConfig explosionConfig, ImpactConfig clusterConfig, ImpactConfig deathConfig, ImpactConfig laserConfig, ImpactConfig bloodConfig, Transform poolRoot, IClock clock, CombatEventHub hub)
         {
             _clock = clock;
             _hub = hub;
@@ -77,6 +78,13 @@ namespace Game.Runtime.Combat
                 if (poolRoot != null) lzGo.transform.SetParent(poolRoot);
                 _laserPool = new Pool<LaserBeamView>(laserConfig, lzGo.transform);
             }
+            // 방어선 침범 피 폭발 풀(#3). 미배선 시 무연출.
+            if (bloodConfig != null && bloodConfig.Prefab != null)
+            {
+                GameObject bGo = new GameObject($"[Pool] {bloodConfig.PoolName}");
+                if (poolRoot != null) bGo.transform.SetParent(poolRoot);
+                _bloodPool = new Pool<ImpactVfxView>(bloodConfig, bGo.transform);
+            }
         }
 
         protected override void OnInitialize()
@@ -86,6 +94,7 @@ namespace Game.Runtime.Combat
             _hub.OnClusterBurst += HandleClusterBurst;
             _hub.OnEnemyDeath += HandleEnemyDeath;
             _hub.OnLaserRow += HandleLaserRow;
+            _hub.OnBaseHit += HandleBaseHit;
             _clock.OnTick += HandleTick;
         }
 
@@ -96,6 +105,7 @@ namespace Game.Runtime.Combat
             _hub.OnClusterBurst -= HandleClusterBurst;
             _hub.OnEnemyDeath -= HandleEnemyDeath;
             _hub.OnLaserRow -= HandleLaserRow;
+            _hub.OnBaseHit -= HandleBaseHit;
             _clock.OnTick -= HandleTick;
             for (int i = 0; i < _active.Count; i++)
             {
@@ -113,7 +123,7 @@ namespace Game.Runtime.Combat
         protected override void OnFixedTick(float _) { }
 
         // 직격만 임팩트 스폰. 2차뎀은 hitDir=zero로 들어와 스킵(HitFeedback의 움찔 구분과 동일 규약).
-        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir, BallSourceType sourceType)
+        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir, BallSourceType sourceType, DamageKind kind)
         {
             if (hitDir.sqrMagnitude <= 1e-6f) return;   // 번·행뎀·폭발 = 임팩트 없음
             if (_impactPools.Count == 0) return;         // 임팩트 프리팹 미배선 → 코어 루프 보존(무연출)
@@ -168,6 +178,17 @@ namespace Game.Runtime.Combat
             if (beam == null) return;
             beam.Play(new Vector3(center.x, center.y, 0f));
             _activeLasers.Add(beam);
+        }
+
+        // 방어선 침범 = 캐릭터 피격 위치에 피 폭발 1회. 미배선 시 스킵.
+        private void HandleBaseHit(Vector2 pos)
+        {
+            if (_bloodPool == null) return;
+            ImpactVfxView fx = _bloodPool.Get();
+            if (fx == null) return;
+            fx.Play(new Vector3(pos.x, pos.y, 0f));
+            _poolOf[fx] = _bloodPool;
+            _active.Add(fx);
         }
 
         // IClock.OnTick: 활성 임팩트 수명 전진(GameDeltaTime → 일시정지 시 dt=0으로 정지).
