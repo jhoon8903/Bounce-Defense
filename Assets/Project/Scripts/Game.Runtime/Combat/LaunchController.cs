@@ -8,10 +8,14 @@ namespace Game.Runtime.Combat
         [SerializeField] private Transform launchOrigin;
 
 #if UNITY_EDITOR
-        [Header("MCP 자동 검증용 (드래그 입력 시뮬레이션 불가 우회) — 에디터 전용")]
+        [Header("에디터 전용: MCP 자동 검증 + 프로파일링용 자동 스윕 발사")]
         [SerializeField] private bool autoLaunchOnPlay;
         [SerializeField] private float autoLaunchDelay = 0.5f;
         [SerializeField] private Vector2 autoLaunchDirection = Vector2.up;
+        [SerializeField] private bool autoSweep = true;         // 자동 발사 시 조준을 좌우로 스윕 → 무거운 전투 재현(GC/셰이더 프로파일링)
+        [SerializeField] private float autoSweepDegrees = 55f;  // 스윕 폭(90°±값)
+        [SerializeField] private float autoSweepSpeed = 2f;     // 스윕 속도(rad/s)
+        private bool _autoSweeping;
 #endif
 
         private static readonly Vector2 OriginFallback = new(0f, -6.70f);
@@ -35,7 +39,20 @@ namespace Game.Runtime.Combat
         }
 
 #if UNITY_EDITOR
-        private void AutoLaunch() => BeginFiring(autoLaunchDirection);
+        private void AutoLaunch()
+        {
+            BeginFiring(autoLaunchDirection);
+            _autoSweeping = autoSweep;
+        }
+
+        // 에디터 전용: 자동 스윕 중이면 조준을 좌우로 오실레이트 → 볼이 그리드 전체를 훑어 실전투 재현.
+        // 빌드엔 없음(#if). Profiler(Window>Analysis>Profiler)로 무거운 웨이브의 GC Alloc/셰이더 힛치 관찰용.
+        private void Update()
+        {
+            if (!_autoSweeping) return;
+            float ang = (90f + autoSweepDegrees * Mathf.Sin(Time.time * autoSweepSpeed)) * Mathf.Deg2Rad;
+            SetAimDirection(new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)));
+        }
 #endif
         
         public void BeginFiring(Vector2 direction)
