@@ -14,6 +14,7 @@ namespace Game.Runtime.Grid
         private readonly int _rows;
         private readonly int[] _cells;                              // row*Cols + col -> 핸들
         private readonly Dictionary<int, List<int>> _cellsByHandle; // 핸들 -> 점유 셀 인덱스(제거 O(풋프린트))
+        private readonly Stack<List<int>> _listPool = new();        // 셀 버킷 재사용(핸들이 단조증가라 하강 재등록마다 new List 할당하던 것 제거)
 
         public int Cols => _cols;
         public int Rows => _rows;
@@ -64,7 +65,8 @@ namespace Game.Runtime.Grid
             if (!CanPlace(anchor, fp)) return false;
             if (!_cellsByHandle.TryGetValue(handle, out List<int> list))
             {
-                list = new List<int>(fp.CellCount);
+                list = _listPool.Count > 0 ? _listPool.Pop() : new List<int>(4);
+                list.Clear();
                 _cellsByHandle[handle] = list;
             }
             for (int dy = 0; dy < fp.Height; dy++)
@@ -82,6 +84,8 @@ namespace Game.Runtime.Grid
             if (!_cellsByHandle.TryGetValue(handle, out List<int> list)) return false;
             for (int i = 0; i < list.Count; i++)
                 if (_cells[list[i]] == handle) _cells[list[i]] = Empty;
+            list.Clear();
+            _listPool.Push(list);
             _cellsByHandle.Remove(handle);
             return true;
         }

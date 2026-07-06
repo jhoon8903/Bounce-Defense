@@ -26,6 +26,7 @@ namespace Game.Runtime.Enemy
         }
 
         private readonly Dictionary<string, Entry> _entries = new();
+        private readonly Stack<Entry> _entryPool = new(); // Entry 재사용(스폰 버스트 시 per-spawn 힙할당 제거)
         private readonly List<string> _idCache = new();
 
         // 등장 시작. 셀은 이미 그리드에 예약된 상태로 호출된다(예약과 동시에 연출만 지연).
@@ -36,16 +37,25 @@ namespace Game.Runtime.Enemy
             model.BeginEntering(landedCenter.y);
             view.BeginEntranceVisual(worldSize);
             view.SetEntranceFrame(false, 0f, landedCenter, 0f);
-            _entries[id] = new Entry
-            {
-                Model = model,
-                View = view,
-                Delay = Mathf.Max(0, cascadeIndex) * CascadeStagger,
-                Elapsed = 0f,
-            };
+            Entry e = _entryPool.Count > 0 ? _entryPool.Pop() : new Entry();
+            e.Model = model;
+            e.View = view;
+            e.Delay = Mathf.Max(0, cascadeIndex) * CascadeStagger;
+            e.Elapsed = 0f;
+            _entries[id] = e;
         }
 
-        public void Remove(string id) => _entries.Remove(id);
+        public void Remove(string id) => ReturnEntry(id);
+
+        // 엔트리를 풀로 돌린다(참조 정리 후 재사용). 모든 제거 경로가 여기로.
+        private void ReturnEntry(string id)
+        {
+            if (!_entries.TryGetValue(id, out Entry e)) return;
+            e.Model = null;
+            e.View = null;
+            _entryPool.Push(e);
+            _entries.Remove(id);
+        }
 
         public void Tick(float deltaTime)
         {
@@ -67,7 +77,7 @@ namespace Game.Runtime.Enemy
             // 불변식: 뷰가 풀로 반환·재발급됐다면(모델 불일치) 이 엔트리는 유령 — 새 적을 건드리기 전에 폐기.
             if (view == null || !ReferenceEquals(view.Model, model))
             {
-                _entries.Remove(id);
+                ReturnEntry(id);
                 return;
             }
             entry.Elapsed += dt;
@@ -88,7 +98,7 @@ namespace Game.Runtime.Enemy
                 model.SetPosition(new Vector2(x, landedY));
                 view.EndEntranceVisual();
                 model.MarkActive();
-                _entries.Remove(id);
+                ReturnEntry(id);
                 return;
             }
             if (elapsed < delay)

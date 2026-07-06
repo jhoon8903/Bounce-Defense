@@ -19,6 +19,7 @@ namespace Game.Runtime.Enemy
         [SerializeField] private ParticleSystem burnFx; // 번 불꽃 루프(적-부착, 몹 위). SetBurning으로 on/off. 미배선 시 스킵.
         [SerializeField] private ParticleSystem freezeFx; // 냉동 서리/눈 루프(적-부착, 몹 위). SetFrozen으로 on/off. 미배선 시 스킵.
 
+        private static Camera s_mainCamera; // Camera.main 캐시(스폰마다 FindGameObjectsWithTag 스캔 방지). 씬 리로드 시 == null(파괴됨)로 자동 재취득.
         private System.Action<EnemyView, int> _damageSink;
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
         private System.Action<EnemyView, float, float> _freezeSink;    // (view, duration, slow)
@@ -89,7 +90,8 @@ namespace Game.Runtime.Enemy
             }
             if (boxCollider != null) boxCollider.enabled = true;
             transform.position = model.Position;
-            hpCanvas.worldCamera = Camera.main;
+            if (s_mainCamera == null) s_mainCamera = Camera.main; // 파괴/최초 시에만 스캔
+            hpCanvas.worldCamera = s_mainCamera;
             RefreshHp(model);
         }
         

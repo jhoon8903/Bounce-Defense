@@ -17,7 +17,10 @@ namespace Game.Runtime.UI
         [SerializeField] private CardView passiveTemplate;     // PassiveCard
         [SerializeField] private SkillLoadoutView loadoutView; // SkillMonitor// Rerole (스펙 제외 → 숨김)
 
-        private readonly List<CardView> _spawned = new();
+        // 카드 뷰 풀(템플릿별). Instantiate/Destroy 대신 SetActive 토글 → 레벨업 프레임 스톨 제거.
+        private readonly List<CardView> _activePool = new();
+        private readonly List<CardView> _passivePool = new();
+        private readonly List<CardView> _shown = new();
         private Action<SkillCard> _onPick;
         private bool _awoke;
 
@@ -38,28 +41,38 @@ namespace Game.Runtime.UI
         {
             EnsureAwake();
             _onPick = onPick;
-            ClearSpawned();
-            Transform parent = cardTray != null ? cardTray : transform;
+            ReturnShown();
+            int slot = 0;
             for (int i = 0; i < cards.Count; i++)
             {
                 SkillCard card = cards[i];
                 if (!card.IsValid) continue;
-                CardView template = card.Definition.Category == SkillCategory.Passive && passiveTemplate != null
-                    ? passiveTemplate
-                    : activeTemplate;
+                bool passive = card.Definition.Category == SkillCategory.Passive && passiveTemplate != null;
+                CardView template = passive ? passiveTemplate : activeTemplate;
                 if (template == null) continue;
-                CardView instance = Instantiate(template, parent);
+                CardView instance = Rent(template, passive ? _passivePool : _activePool);
+                instance.transform.SetSiblingIndex(slot++); // 트레이 순서 보장(비활성 풀 뷰가 섞여 있어도 좌→우 유지)
                 instance.gameObject.SetActive(true);
                 instance.Bind(card, HandlePick);
-                _spawned.Add(instance);
+                _shown.Add(instance);
             }
             SetVisible(true);
+        }
+
+        // 풀에서 비활성 뷰 재사용, 없으면 1회만 Instantiate(이후 영구 재사용). 매 레벨업 Instantiate/Destroy churn 제거.
+        private CardView Rent(CardView template, List<CardView> pool)
+        {
+            for (int i = 0; i < pool.Count; i++)
+                if (pool[i] != null && !pool[i].gameObject.activeSelf) return pool[i];
+            CardView inst = Instantiate(template, cardTray != null ? cardTray : transform);
+            pool.Add(inst);
+            return inst;
         }
 
         public void Hide()
         {
             _onPick = null;
-            ClearSpawned();
+            ReturnShown();
             SetVisible(false);
         }
 
@@ -71,10 +84,11 @@ namespace Game.Runtime.UI
             cb?.Invoke(card);
         }
 
-        private void ClearSpawned()
+        // 표시 중이던 카드를 비활성화(Destroy X)해 풀로 돌린다.
+        private void ReturnShown()
         {
-            for (int i = 0; i < _spawned.Count; i++) if (_spawned[i] != null) Destroy(_spawned[i].gameObject);
-            _spawned.Clear();
+            for (int i = 0; i < _shown.Count; i++) if (_shown[i] != null) _shown[i].gameObject.SetActive(false);
+            _shown.Clear();
         }
 
         private void SetVisible(bool visible)

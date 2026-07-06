@@ -31,6 +31,10 @@ namespace Game.Runtime.Enemy
         private readonly EnemyDescentSimulator _descent;
         private readonly BreachChoreographer _breach;
         private readonly EnemyStatusSimulator _status;
+        // 스폰마다 SetXSink에 넘기는 델리게이트 캐시(메서드그룹→델리게이트 매 스폰 할당 방지). OnInactive가 싱크를 null로 비워 매 스폰 재설정됨.
+        private readonly System.Action<EnemyView, int> _damageSink;
+        private readonly System.Action<EnemyView, float, float, int> _burnSink;
+        private readonly System.Action<EnemyView, float, float> _freezeSink;
         private Vector2 _defensePoint = new Vector2(0f, -6.70f); // 침범 연출 돌진 목표(캐릭터). GameLifetimeScope가 주입.
 
         // Last Match(패시브, §212): 킬 시 반경 폭발. SkillRuntime이 로드아웃 변경 시 SetLastMatch로 값 주입(0=미보유).
@@ -47,6 +51,9 @@ namespace Game.Runtime.Enemy
             _grid = grid;
             _hub = hub;
             _resolver = resolver;
+            _damageSink = HandleDamage;
+            _burnSink = HandleBurn;
+            _freezeSink = HandleFreeze;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
             _breach = new BreachChoreographer(OnBreachImpact);
@@ -90,9 +97,9 @@ namespace Game.Runtime.Enemy
             }
 
             view.SetFootprintSize(placement.WorldSize);
-            view.SetDamageSink(HandleDamage);
-            view.SetBurnSink(HandleBurn);
-            view.SetFreezeSink(HandleFreeze);
+            view.SetDamageSink(_damageSink);
+            view.SetBurnSink(_burnSink);
+            view.SetFreezeSink(_freezeSink);
 
             _models[id] = model;
             _views[id] = view;
