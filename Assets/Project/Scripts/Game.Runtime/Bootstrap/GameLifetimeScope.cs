@@ -18,8 +18,8 @@ using VContainer.Unity;
 
 namespace Game.Runtime.Bootstrap
 {
-    // 조립 루트: config(데이터)는 GameConfigContainer, 씬 오브젝트는 필드로 받아 도메인별 Configure*로 배선하고,
-    // 순서 의존 초기화(그리드→적→스테이지)는 InitializeGame 한 곳에 모은다 — 배선(Configure)과 생명주기(InitializeGame)의 분리.
+    // 조립 루트(배선 전용): config(데이터)는 GameConfigContainer, 씬 오브젝트는 필드로 받아 도메인별 Configure*로 배선한다.
+    // 순서 의존 초기화(생명주기)는 GameEntryPoint(IStartable)로 분리 — 이 클래스는 '무엇을 등록하나'만 안다.
     public sealed class GameLifetimeScope : LifetimeScope
     {
         [Header("Data (단일 config 컨테이너 — 데이터 주도)")]
@@ -49,7 +49,19 @@ namespace Game.Runtime.Bootstrap
             ConfigureStageAndResult(builder);
             ConfigureRoguelike(builder, draftReady);
 
-            builder.RegisterBuildCallback(container => InitializeGame(container, poolParent, charReady, draftReady));
+            // 초기화 오케스트레이션은 GameEntryPoint(IStartable)로 분리 — 배선(Configure) ≠ 생명주기. 씬 파생값만 BootstrapContext로 전달.
+            Vector2 gridOrigin = gridAnchor
+                ? gridAnchor.position
+                : config.GridConfig != null ? config.GridConfig.OriginFallback : new Vector2(0f, 1.27f);
+            builder.RegisterInstance(new BootstrapContext
+            {
+                PoolParent = poolParent,
+                GridOrigin = gridOrigin,
+                DefensePoint = launchController ? launchController.Origin : new Vector2(0f, -6.70f),
+                CharReady = charReady,
+                DraftReady = draftReady,
+            });
+            builder.RegisterEntryPoint<GameEntryPoint>();
         }
 
         // 코어 서비스 + 전투 피드백: 클럭·풀·데미지 파이프라인·이벤트 허브·집계·피격 피드백·전투 VFX.
@@ -152,49 +164,6 @@ namespace Game.Runtime.Bootstrap
                 builder.RegisterComponent(cardSelectView);
                 builder.Register<CardDraftController>(Lifetime.Singleton);
             }
-        }
-
-        // 순서 의존 초기화(배선 완료 후 1회): 풀 활성 → 볼/스킬/피드백/VFX → 그리드(원점) → 적(방어점) → 스테이지(웨이브 시작) → 결과 UI → 조준/드래프트.
-        private void InitializeGame(IObjectResolver container, Transform poolParent, bool charReady, bool draftReady)
-        {
-            IPool pool = container.Resolve<IPool>();
-            // 볼은 BallFactory가 타입별 풀 소유 → GamePool은 EnemyView + DamageTextView 담당(BallView 제외, §11-9).
-            pool.Activate(poolParent, typeof(EnemyView), typeof(DamageTextView));
-            container.Resolve<BallController>().Initialize();
-            container.Resolve<SkillRuntime>().Initialize();     // 로드아웃 구독 + 초기 로스터(노멀 5) 푸시. BallController 초기화 직후.
-            container.Resolve<HitFeedbackController>().Initialize(); // 데미지 숫자 + 화이트 플래시(OnHit+OnTick 구독). 풀 활성화 후.
-            container.Resolve<CombatVfxController>().Initialize();   // 타입별 임팩트(자체 풀 소유). OnHit+OnTick 구독.
-            container.Resolve<DamageStats>();                        // 데미지 집계 시작(OnHit 구독)
-            if (charReady) container.Resolve<CharController>().Initialize(); // 조준 스무딩 + 발사 반동(OnTick 구독)
-
-            // 그리드: 원점(씬 Grid 앵커)을 Initialize 전에 주입 — BallController.SetCollectTarget 패턴과 동일.
-            GridController grid = container.Resolve<GridController>();
-            Vector2 gridOrigin = gridAnchor
-                ? gridAnchor.position
-                : config.GridConfig != null ? config.GridConfig.OriginFallback : new Vector2(0f, 1.27f);
-            grid.SetOrigin(gridOrigin);
-            grid.Initialize();
-
-            // 적: 그리드 준비 후 초기화(스폰 시 GridController 배치 권한 사용).
-            EnemyController enemyController = container.Resolve<EnemyController>();
-            enemyController.Initialize();
-            enemyController.SetDefensePoint(launchController ? launchController.Origin : new Vector2(0f, -6.70f)); // 침범 연출 돌진 목표(캐릭터)
-
-            // 스테이지: 적 준비 후 초기화(초기화 시 웨이브 스폰 시작).
-            StageController stageController = container.Resolve<StageController>();
-            stageController.Initialize();
-            container.Resolve<DefeatSequenceController>().Initialize(); // 실패 연출 게이트 구독
-
-            // 결과 UI(스펙 §5): HP 바(BaseModel 구독) + 승/패 결과 팝업(StateChanged 구독). 씬에 있으면 배선.
-            HpBarView hpBar = FindFirstObjectByType<HpBarView>();
-            if (hpBar) hpBar.Bind(stageController.Base);
-            container.Resolve<ResultViewController>().Initialize();
-
-            // 조준 입력이 일시정지(드래프트/결과)를 알도록 IClock 주입 — 카드 클릭이 조준으로 새는 버그 방지.
-            AimController aim = FindFirstObjectByType<AimController>();
-            if (aim) container.Inject(aim);
-
-            if (draftReady) container.Resolve<CardDraftController>().Initialize(); // 킬→XP 구독 + 뷰 바인드
         }
     }
 }
