@@ -13,7 +13,6 @@ namespace Game.Runtime.Enemy
         [SerializeField] private SpriteRenderer blockRenderer; // 돌 타일(콜라이더 몸체와 정렬)
         [SerializeField] private SpriteRenderer mobRenderer;   // 위에 올라가는 몬스터(순수 비주얼)
         [SerializeField] private BoxCollider2D boxCollider;
-        [SerializeField] private Transform hpBarRoot;   // HP바 앵커(구 HpBarCanvas — Canvas 제거, 순수 Transform). 풋프린트 높이별 위치 보정.
         [SerializeField] private SpriteRenderer hpBg;   // HP바 배경(SpriteRenderer = 스프라이트 배치, 적별 월드캔버스 제거)
         [SerializeField] private SpriteRenderer hpFill; // HP바 채움 — 좌측 고정 스케일로 HP% 표현(Image.fillAmount 대체)
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
@@ -44,6 +43,7 @@ namespace Game.Runtime.Enemy
         private Vector3 _hpFillBaseLocalPos; // 채움 프리팹 기준 로컬 위치(좌측 앵커 기준)
         private float _hpFillWidth;          // 채움 로컬 폭(스케일 채움 시 좌측 고정 시프트 계산)
         private bool _hpBarBaseCaptured;
+        private Transform HpBarRoot => hpBg.transform;
 
         public void SetDamageSink(System.Action<EnemyView, int> sink) => _damageSink = sink;
         public void SetBurnSink(System.Action<EnemyView, float, float, int> sink) => _burnSink = sink;
@@ -54,17 +54,17 @@ namespace Game.Runtime.Enemy
             if (boxCollider != null) boxCollider.size = worldSize;
             if (blockRenderer != null && blockRenderer.drawMode != SpriteDrawMode.Simple) blockRenderer.size = worldSize;
             CaptureHpBarBase();
-            if (hpBarRoot == null) return;
+            if (HpBarRoot == null) return;
             float fpH = Model != null ? Mathf.Max(1, Model.Footprint.Height) : 1;
             float extraHalf = worldSize.y * (1f - 1f / fpH) * 0.5f;
-            hpBarRoot.localPosition = _hpBarBaseLocalPos + new Vector3(0f, -extraHalf, 0f);
+            HpBarRoot.localPosition = _hpBarBaseLocalPos + new Vector3(0f, -extraHalf, 0f);
         }
 
         // 프리팹 기준 HP 바 위치를 최초 1회 캡처(풀 재사용 대비 원본 보존).
         private void CaptureHpBarBase()
         {
-            if (_hpBarBaseCaptured || hpBarRoot == null) return;
-            _hpBarBaseLocalPos = hpBarRoot.localPosition;
+            if (_hpBarBaseCaptured || HpBarRoot == null) return;
+            _hpBarBaseLocalPos = HpBarRoot.localPosition;
             if (hpFill != null)
             {
                 _hpFillBaseScale = hpFill.transform.localScale;
