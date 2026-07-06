@@ -89,7 +89,7 @@ namespace Game.Runtime.Combat
                 Vector2 pos = occ is EnemyView ev && ev.Model != null ? ev.Model.Position : Vector2.zero;
                 HitContext ctx = HitContext.Secondary(occ, source, DamageKind.LaserRow, flatDamage);
                 _resolver.Resolve(ctx); // 무크리·무버프 flat, 동일 리졸버 → 사망 시 RaiseKill(Last Match 등 이어짐, §255)
-                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero); // 행뎀=방향 없음(반동 없음)
+                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, source); // 행뎀=방향 없음(반동·임팩트 없음)
             }
         }
 
@@ -235,7 +235,7 @@ namespace Game.Runtime.Combat
             {
                 Collider2D collider = hits[i].Collider;
                 if (collider == null) continue;
-                Vector2 pos = collider.transform.position; // Resolve 전 캡처(살상타 디스폰 대비, 숫자는 살린다).
+                Vector2 pos = hits[i].Point; // 접촉점(콜라이더 중앙 아님) — 임팩트·숫자가 실제 타격 위치에 뜨도록. Resolve 전 캡처(살상타 디스폰 대비).
                 IDamageable target = collider.GetComponentInParent<IDamageable>();
                 if (target == null) continue; // IDamageable 없는 대상(예: 브리지 미배선 블록) — 안전 무시.
                 // 로스터 볼 = 직격(크리·모디파이어·hitNormal 전후면). Cluster 특수볼 등 2차볼 = 무크리·무버프 flat.
@@ -246,7 +246,7 @@ namespace Game.Runtime.Combat
                 if (spec.DamageKind == DamageKind.Direct && _mirrorArmed.Remove(id))
                     ctx.BonusAdditivePercent = _mirrorPercent;
                 _resolver.Resolve(ctx);
-                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit, hits[i].Normal); // 직격 법선 → 움찔 반동
+                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit, hits[i].Normal, spec.SourceType); // 직격 법선 → 움찔 반동 + 타입별 임팩트
                 spec.Module?.OnEnemyHit(target, ctx, this); // services = 이 컨트롤러(IBallEffectContext 파사드)
             }
         }

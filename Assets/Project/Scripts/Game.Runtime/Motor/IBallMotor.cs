@@ -19,7 +19,8 @@ namespace Game.Runtime.Motor
     {
         public readonly Collider2D Collider;
         public readonly Vector2 Normal;
-        public BallHit(Collider2D collider, Vector2 normal) { Collider = collider; Normal = normal; }
+        public readonly Vector2 Point; // 접촉점(레이캐스트 hit.point). 콜라이더 중앙이 아니라 실제 타격 지점 — 임팩트/숫자 위치용.
+        public BallHit(Collider2D collider, Vector2 normal, Vector2 point) { Collider = collider; Normal = normal; Point = point; }
     }
 
     public interface IBallMotor

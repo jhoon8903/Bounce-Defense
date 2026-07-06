@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Combat;
 using Game.Core.Clock;
 using Game.Core.Mvc;
 using Game.Core.Pool;
@@ -63,7 +64,8 @@ namespace Game.Runtime.Combat
         protected override void OnFixedTick(float _) { }
 
         // ---- OnHit: 숫자 스폰 + 플래시/움찔 시작 ----
-        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir)
+        // sourceType은 임팩트 파티클(CombatVfxController) 전용 — 여기선 미사용(피격 반응만 담당).
+        private void HandleHit(EnemyView view, Vector2 worldPos, int amount, bool isCrit, Vector2 hitDir, BallSourceType sourceType)
         {
             if (amount > 0)
             {

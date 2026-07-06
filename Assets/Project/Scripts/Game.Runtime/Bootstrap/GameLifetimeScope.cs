@@ -23,6 +23,7 @@ namespace Game.Runtime.Bootstrap
         [Header("Pool")]
         [SerializeField] private PoolConfiguration[] poolConfigs; // EnemyView 등 GamePool 대상
         [SerializeField] private BallConfig[] ballConfigs;         // 볼 타입별 config(각자 프리팹) — BallFactory가 타입별 풀 소유
+        [SerializeField] private ImpactConfig[] impactConfigs;     // 볼 타입별 임팩트 파티클 config — CombatVfxController가 타입별 풀 소유
         [SerializeField] private Transform poolRoot;
 
         [Header("Scene Refs (RegisterComponent로 주입)")]
@@ -51,9 +52,12 @@ namespace Game.Runtime.Bootstrap
             builder.Register<DamageResolver>(Lifetime.Singleton);   // ctor: ModifierRegistry + IRandom 자동주입
             builder.Register<CombatEventHub>(Lifetime.Singleton);
             builder.Register<HitFeedbackController>(Lifetime.Singleton); // 데미지 숫자(풀) + 적 화이트 플래시
-            // 볼 타입별 config(각자 프리팹). BallFactory가 타입별 Pool<BallView>를 소유(§11-9).
-            // 하나(Normal 우선)는 BallController 속도/반경/수집속도용으로도 등록.
+            // 전투 파티클 스포너: 볼 타입별 임팩트 풀 소유(BallFactory와 동일하게 config+poolRoot는 씬 주입 → 팩토리 람다).
+            builder.Register<CombatVfxController>(container =>
+                new CombatVfxController(impactConfigs, poolRoot ? poolRoot : transform,
+                    container.Resolve<IClock>(), container.Resolve<CombatEventHub>()), Lifetime.Singleton);
             BallConfig normalConfig = null;
+            
             if (ballConfigs != null)
             {
                 for (int i = 0; i < ballConfigs.Length; i++)
@@ -128,6 +132,9 @@ namespace Game.Runtime.Bootstrap
 
                 // 피격 피드백(데미지 숫자 + 화이트 플래시): OnHit + OnTick 구독. 풀 활성화 후.
                 container.Resolve<HitFeedbackController>().Initialize();
+
+                // 전투 파티클(타입별 임팩트): OnHit + OnTick 구독. 자체 타입별 풀 소유(GamePool 무관, pool.Activate 불필요).
+                container.Resolve<CombatVfxController>().Initialize();
 
                 // Char 비주얼 구동: OnTick 구독(조준 스무딩 + 발사 반동). 뷰/발사대 배선된 경우에만.
                 if (charReady) container.Resolve<CharController>().Initialize();

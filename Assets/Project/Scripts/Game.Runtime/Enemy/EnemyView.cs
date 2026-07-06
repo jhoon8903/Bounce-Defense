@@ -16,6 +16,7 @@ namespace Game.Runtime.Enemy
         [SerializeField] private Canvas hpCanvas;// 볼 CircleCast 대상(Enemy 레이어)
         [SerializeField] private Image hpSliderFill;              // 몸체 HP 숫자(선택 — 미배선 시 스킵)
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
+        [SerializeField] private ParticleSystem burnFx; // 번 불꽃 루프(적-부착, 몹 위). SetBurning으로 on/off. 미배선 시 스킵.
 
         private System.Action<EnemyView, int> _damageSink;
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
@@ -198,6 +199,22 @@ namespace Game.Runtime.Enemy
 
         public void ApplyFreeze(float durationSeconds, float slow) => _freezeSink?.Invoke(this, durationSeconds, slow);
 
+        // 번 불꽃 VFX(적-부착 루프). 컨트롤러(EnemyStatusSimulator 경유)가 첫 스택=on, 만료/디스폰=off. 미배선 시 무시.
+        public void SetBurning(bool on)
+        {
+            if (burnFx == null) return;
+            if (on)
+            {
+                if (!burnFx.gameObject.activeSelf) burnFx.gameObject.SetActive(true); // 먼저 활성화해야 Play 유효
+                if (!burnFx.isPlaying) burnFx.Play(true);
+            }
+            else
+            {
+                burnFx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                if (burnFx.gameObject.activeSelf) burnFx.gameObject.SetActive(false);
+            }
+        }
+
         // 히트 플래시량(0=원색, 1=완전 흰색). HitFeedbackController가 매 틱 감쇠시키며 호출. 블록+몹 함께(음영 제외).
         public void SetHitFlash(float amount)
         {
@@ -215,6 +232,7 @@ namespace Game.Runtime.Enemy
             _burnSink = null;
             _freezeSink = null;
             SetHitFlash(0f); // 풀 재사용 대비 플래시 원복(고스트 방지 최종 보증)
+            SetBurning(false); // 풀 재사용 대비 불꽃 끔
             HideVisuals();
             if (shadowRenderer != null) shadowRenderer.enabled = false;
             SetSquash(0f); // 몹 스쿼시 복구

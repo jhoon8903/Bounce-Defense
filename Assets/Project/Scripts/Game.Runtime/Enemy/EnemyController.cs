@@ -47,7 +47,7 @@ namespace Game.Runtime.Enemy
             _resolver = resolver;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
-            _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow);
+            _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow, SetEnemyBurning);
         }
 
         protected override void OnInitialize() => _clock.OnFixedTick += OnClockFixedTick;
@@ -144,7 +144,7 @@ namespace Game.Runtime.Enemy
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
                 _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드)
-                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero); // 폭발 = 흰색·무방향(반동 없음)
+                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero, BallSourceType.Normal); // 폭발 = 흰색·무방향(반동·임팩트 없음)
             }
 
             _explosionDepth--;
@@ -174,6 +174,12 @@ namespace Game.Runtime.Enemy
             if (_models.TryGetValue(id, out EnemyModel model) && model != null) model.SetFreezeSlow(slow);
         }
 
+        // 번 시각 상태(EnemyStatusSimulator) → 뷰의 불꽃 VFX on/off. 첫 스택=on, 전 스택 만료/디스폰=off.
+        private void SetEnemyBurning(string id, bool on)
+        {
+            if (_views.TryGetValue(id, out EnemyView view) && view != null) view.SetBurning(on);
+        }
+
         // 번 초당 틱: 2차 데미지(flat·무크리·무버프)를 동일 DamageResolver로 적용 → 숫자표기·사망 이벤트 통일.
         // Resolve → view.ApplyDamage → HandleDamage 경로라 사망 시 RaiseKill·디스폰(상태도 정리)이 그대로 발동.
         private void ApplyBurnDamage(string id, float dps)
@@ -182,7 +188,7 @@ namespace Game.Runtime.Enemy
             Vector2 pos = view.Model.Position;                 // Resolve 전 캡처(살상 번틱 디스폰 대비)
             HitContext ctx = HitContext.Secondary(view, BallSourceType.Fire, DamageKind.Burn, dps);
             _resolver.Resolve(ctx);
-            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero); // 번 = 흰색·무방향(반동 없음)
+            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, BallSourceType.Fire); // 번 = 흰색·무방향(반동·임팩트 없음)
         }
 
         // ---- IClock 틱: 등장 연출(입장 중) → 연속 하강(입장 완료) ----
