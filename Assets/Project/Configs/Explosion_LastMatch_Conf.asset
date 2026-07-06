@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23a8f46dd5a394f30bb5eb83ea0d6670, type: 3}
+  m_Name: Explosion_LastMatch_Conf
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Combat.ImpactConfig
+  poolName: Explosion_LastMatch
+  prefab: {fileID: 5505391926293118361, guid: 2047822c30b0148858a175dcc0f10df0, type: 3}
+  defaultCapacity: 4
+  maxCapacity: 16
+  sourceType: 0

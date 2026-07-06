@@ -79,7 +79,11 @@ namespace Game.Runtime.Combat
             if (shots != _lastShots)
             {
                 _lastShots = shots;
-                if (dt > 0f) _recoil = _flipped ? -_anchor.RecoilKickDeg : _anchor.RecoilKickDeg;
+                if (dt > 0f)
+                {
+                    _recoil = _flipped ? -_anchor.RecoilKickDeg : _anchor.RecoilKickDeg;
+                    _view.Staff?.PlayCastAura(); // 발사 룬 마법진(생겼다 사라짐 — 매 발 재트리거)
+                }
             }
 
             _anchor.SetLocalAngle(_aimZ + _recoil);

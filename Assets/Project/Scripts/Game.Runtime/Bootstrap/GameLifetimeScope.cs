@@ -24,6 +24,10 @@ namespace Game.Runtime.Bootstrap
         [SerializeField] private PoolConfiguration[] poolConfigs; // EnemyView 등 GamePool 대상
         [SerializeField] private BallConfig[] ballConfigs;         // 볼 타입별 config(각자 프리팹) — BallFactory가 타입별 풀 소유
         [SerializeField] private ImpactConfig[] impactConfigs;     // 볼 타입별 임팩트 파티클 config — CombatVfxController가 타입별 풀 소유
+        [SerializeField] private ImpactConfig explosionConfig;     // Last Match 붉은 폭발 파티클 config(#5) — 볼 타입 무관 단일 풀. 미배선 시 폭발 무연출.
+        [SerializeField] private ImpactConfig clusterConfig;       // Cluster 분열 수류탄 폭발 config — 볼 타입 무관 단일 풀. 미배선 시 무연출.
+        [SerializeField] private ImpactConfig deathConfig;         // 적 사망 돌 깨짐 config(#3) — 볼 타입 무관 단일 풀. 미배선 시 무연출.
+        [SerializeField] private ImpactConfig laserConfig;         // Laser 행 빔 파티클 config(#7) — 볼 타입 무관 단일 풀. 미배선 시 빔 무연출.
         [SerializeField] private Transform poolRoot;
 
         [Header("Scene Refs (RegisterComponent로 주입)")]
@@ -54,7 +58,7 @@ namespace Game.Runtime.Bootstrap
             builder.Register<HitFeedbackController>(Lifetime.Singleton); // 데미지 숫자(풀) + 적 화이트 플래시
             // 전투 파티클 스포너: 볼 타입별 임팩트 풀 소유(BallFactory와 동일하게 config+poolRoot는 씬 주입 → 팩토리 람다).
             builder.Register<CombatVfxController>(container =>
-                new CombatVfxController(impactConfigs, poolRoot ? poolRoot : transform,
+                new CombatVfxController(impactConfigs, explosionConfig, clusterConfig, deathConfig, laserConfig, poolRoot ? poolRoot : transform,
                     container.Resolve<IClock>(), container.Resolve<CombatEventHub>()), Lifetime.Singleton);
             BallConfig normalConfig = null;
             

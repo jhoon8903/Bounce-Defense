@@ -17,16 +17,24 @@ namespace Game.Runtime.Enemy
         [SerializeField] private Image hpSliderFill;              // 몸체 HP 숫자(선택 — 미배선 시 스킵)
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
         [SerializeField] private ParticleSystem burnFx; // 번 불꽃 루프(적-부착, 몹 위). SetBurning으로 on/off. 미배선 시 스킵.
+        [SerializeField] private ParticleSystem freezeFx; // 냉동 서리/눈 루프(적-부착, 몹 위). SetFrozen으로 on/off. 미배선 시 스킵.
 
         private System.Action<EnemyView, int> _damageSink;
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
         private System.Action<EnemyView, float, float> _freezeSink;    // (view, duration, slow)
 
-        // 히트 화이트 플래시(SpriteHitFlash 셰이더). MaterialPropertyBlock으로 렌더러별 주입(제로할당·공유머티리얼 무변경).
-        private MaterialPropertyBlock _flashMpb;
+        // 몸체 오버레이(SpriteHitFlash 셰이더): 히트 화이트 플래시(순간) + 냉동 파랑 틴트(지속).
+        // 둘 다 하나의 MaterialPropertyBlock에 공존 — 따로 쓰면 SetPropertyBlock이 서로를 덮어써서 하나가 사라짐(제로할당·공유머티리얼 무변경).
+        private MaterialPropertyBlock _overlayMpb;
+        private float _flashAmount;
+        private float _frostAmount;
         private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
         private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
+        private static readonly int FrostAmountId = Shader.PropertyToID("_FrostAmount");
+        private static readonly int FrostColorId = Shader.PropertyToID("_FrostColor");
         private static readonly Color FlashWhite = Color.white;
+        private static readonly Color FrostCyan = new Color(0.55f, 0.85f, 1f, 1f);
+        private const float FrozenTint = 0.45f; // 얼어있는 동안 파랑 정도(0~1)
         private Vector3 _mobBaseScale = Vector3.one; // 스쿼시 기준(프리팹 몹 스케일이 1이 아닐 수 있어 캡처)
         private Vector3 _mobBasePos;                 // 움찔 반동 기준(몹 로컬 위치 — 킥 후 여기로 복귀)
         private bool _mobBaseCaptured;
@@ -215,14 +223,42 @@ namespace Game.Runtime.Enemy
             }
         }
 
+        // 냉동 서리 VFX(적-부착 루프) + 몸체 파랑 틴트. 컨트롤러(EnemyStatusSimulator 경유)가 첫 냉동=on, 만료/디스폰=off.
+        // 틴트는 파티클 배선 여부와 무관하게 항상 적용(서리 파티클 미배선이어도 몸은 파랗게).
+        public void SetFrozen(bool on)
+        {
+            _frostAmount = on ? FrozenTint : 0f;
+            ApplyOverlay();
+            if (freezeFx == null) return;
+            if (on)
+            {
+                if (!freezeFx.gameObject.activeSelf) freezeFx.gameObject.SetActive(true); // 먼저 활성화해야 Play 유효
+                if (!freezeFx.isPlaying) freezeFx.Play(true);
+            }
+            else
+            {
+                freezeFx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                if (freezeFx.gameObject.activeSelf) freezeFx.gameObject.SetActive(false);
+            }
+        }
+
         // 히트 플래시량(0=원색, 1=완전 흰색). HitFeedbackController가 매 틱 감쇠시키며 호출. 블록+몹 함께(음영 제외).
         public void SetHitFlash(float amount)
         {
-            _flashMpb ??= new MaterialPropertyBlock();
-            _flashMpb.SetColor(FlashColorId, FlashWhite);
-            _flashMpb.SetFloat(FlashAmountId, Mathf.Clamp01(amount));
-            if (blockRenderer != null) blockRenderer.SetPropertyBlock(_flashMpb);
-            if (mobRenderer != null) mobRenderer.SetPropertyBlock(_flashMpb);
+            _flashAmount = Mathf.Clamp01(amount);
+            ApplyOverlay();
+        }
+
+        // 플래시(순간)+틴트(지속)를 한 블록에 담아 블록+몹에 적용. 둘 중 하나만 갱신해도 나머지 값 유지(상호 덮어쓰기 방지).
+        private void ApplyOverlay()
+        {
+            _overlayMpb ??= new MaterialPropertyBlock();
+            _overlayMpb.SetColor(FlashColorId, FlashWhite);
+            _overlayMpb.SetFloat(FlashAmountId, _flashAmount);
+            _overlayMpb.SetColor(FrostColorId, FrostCyan);
+            _overlayMpb.SetFloat(FrostAmountId, _frostAmount);
+            if (blockRenderer != null) blockRenderer.SetPropertyBlock(_overlayMpb);
+            if (mobRenderer != null) mobRenderer.SetPropertyBlock(_overlayMpb);
         }
 
         public override void OnInactive()
@@ -233,6 +269,7 @@ namespace Game.Runtime.Enemy
             _freezeSink = null;
             SetHitFlash(0f); // 풀 재사용 대비 플래시 원복(고스트 방지 최종 보증)
             SetBurning(false); // 풀 재사용 대비 불꽃 끔
+            SetFrozen(false); // 풀 재사용 대비 서리 끔
             HideVisuals();
             if (shadowRenderer != null) shadowRenderer.enabled = false;
             SetSquash(0f); // 몹 스쿼시 복구

@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace Game.Tests
 {
-    // 스펙 §3: 캡 액티브 4 / 패시브 2, 만렙 클램프, 재시작 리셋.
     public sealed class PlayerLoadoutTests
     {
         private PlayerLoadout lo;
@@ -39,8 +38,7 @@ namespace Game.Tests
         [Test]
         public void Acquire_RespectsActiveCap()
         {
-            for (int i = 0; i < 6; i++)
-                lo.Acquire(SkillTestFactory.Skill("a" + i, SkillCategory.Active, 3));
+            for (int i = 0; i < 6; i++) lo.Acquire(SkillTestFactory.Skill("a" + i, SkillCategory.Active, 3));
             Assert.AreEqual(PlayerLoadout.ActiveCap, lo.ActiveCount);
             Assert.IsTrue(lo.IsFull(SkillCategory.Active));
         }
@@ -48,8 +46,7 @@ namespace Game.Tests
         [Test]
         public void Acquire_RespectsPassiveCap()
         {
-            for (int i = 0; i < 4; i++)
-                lo.Acquire(SkillTestFactory.Skill("p" + i, SkillCategory.Passive, 3));
+            for (int i = 0; i < 4; i++) lo.Acquire(SkillTestFactory.Skill("p" + i, SkillCategory.Passive, 3));
             Assert.AreEqual(PlayerLoadout.PassiveCap, lo.PassiveCount);
             Assert.IsTrue(lo.IsFull(SkillCategory.Passive));
         }

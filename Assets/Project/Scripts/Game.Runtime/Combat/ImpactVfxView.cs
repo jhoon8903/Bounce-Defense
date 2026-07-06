@@ -39,7 +39,8 @@ namespace Game.Runtime.Combat
             return false;
         }
 
-        // 스폰 직후 컨트롤러가 호출. 위치 세팅 + 최상위 파티클 전부 리셋 후 재생.
+        // 스폰 직후 컨트롤러가 호출. 위치만 세팅 + 최상위 파티클 전부 리셋 후 재생.
+        // 크기는 프리팹 자체(transform scale + PS 내부)에서만 정함 — 코드가 transform scale을 건드리지 않는다(Daniel 규칙: 스케일은 왜곡, 내부로).
         public void Play(Vector3 worldPos)
         {
             transform.position = worldPos;

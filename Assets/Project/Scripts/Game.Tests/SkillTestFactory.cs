@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Game.Tests
 {
-    // 테스트용 SkillDefinition/Database 빌더. private 직렬화 필드를 SerializedObject로 설정(Editor 전용 asmdef).
     internal static class SkillTestFactory
     {
         public static SkillDefinition Skill(string id, SkillCategory cat, int maxLevel = 3, int[] ballDamage = null)

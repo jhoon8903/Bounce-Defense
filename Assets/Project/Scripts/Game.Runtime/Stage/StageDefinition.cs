@@ -16,12 +16,11 @@ namespace Game.Runtime.Stage
         [SerializeField] [Min(0)] private int xpGrowthPerLevel = 3; // 레벨마다 임계 증가(선형)
 
         public int BaseHp => baseHp;
-        public int WaveCount => waves != null ? waves.Length : 0;
+        public int WaveCount => waves?.Length ?? 0;
         public int XpPerKill => xpPerKill;
         public int BaseXpToLevel => baseXpToLevel;
         public int XpGrowthPerLevel => xpGrowthPerLevel;
 
-        public WaveDefinition GetWave(int index) =>
-            waves != null && index >= 0 && index < waves.Length ? waves[index] : null;
+        public WaveDefinition GetWave(int index) => waves != null && index >= 0 && index < waves.Length ? waves[index] : null;
     }
 }

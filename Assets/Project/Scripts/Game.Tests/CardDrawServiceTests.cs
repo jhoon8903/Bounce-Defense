@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Game.Core.Random;
 using Game.Roguelike;
@@ -6,7 +7,6 @@ using NUnit.Framework;
 
 namespace Game.Tests
 {
-    // 스펙 §3 + 플랜 §260 드로우 규칙(플랜 "절대 컷 금지"). Draw(100)으로 전체 후보를 얻어 규칙을 검증.
     public sealed class CardDrawServiceTests
     {
         private SkillDefinition a1, a2, a3, a4, a5, p1, p2, p3;
@@ -37,7 +37,7 @@ namespace Game.Tests
         public void AllUnowned_OffersEveryNewAtLevel1()
         {
             List<SkillCard> all = draw.Draw(100);
-            Assert.AreEqual(8, all.Count); // 5 active + 3 passive
+            Assert.AreEqual(8, all.Count);
             foreach (SkillCard c in all)
             {
                 Assert.IsTrue(c.IsNew, "unowned should be new: " + c.Definition.SkillId);
@@ -84,7 +84,7 @@ namespace Game.Tests
         [Test]
         public void PassiveCapReached_NoNewPassive_UpgradesOnly()
         {
-            loadout.Acquire(p1); loadout.Acquire(p2); // 2 = cap
+            loadout.Acquire(p1); loadout.Acquire(p2);
             List<SkillCard> all = draw.Draw(100);
             Assert.IsFalse(Has(all, p3), "capped: unowned 3rd passive must not appear");
             Assert.IsTrue(Has(all, p1) && !Of(all, p1).IsNew, "owned passive offered as upgrade");
@@ -96,23 +96,23 @@ namespace Game.Tests
         {
             SkillDatabase tiny = SkillTestFactory.Database(new[] { a1 }, new[] { p1 });
             CardDrawService d = new CardDrawService(tiny, new PlayerLoadout(), new SystemRandom(1));
-            Assert.AreEqual(2, d.Draw(3).Count); // §261: 있는 만큼
+            Assert.AreEqual(2, d.Draw(3).Count);
         }
 
         [Test]
         public void ZeroValid_ReturnsEmpty()
         {
             PlayerLoadout lo = new PlayerLoadout();
-            SkillDatabase tiny = SkillTestFactory.Database(new[] { a1 }, new SkillDefinition[0]);
-            lo.Acquire(a1); lo.Upgrade(a1); lo.Upgrade(a1); // maxed, no other candidates
+            SkillDatabase tiny = SkillTestFactory.Database(new[] { a1 }, Array.Empty<SkillDefinition>());
+            lo.Acquire(a1); lo.Upgrade(a1); lo.Upgrade(a1);
             CardDrawService d = new CardDrawService(tiny, lo, new SystemRandom(1));
-            Assert.AreEqual(0, d.Draw(3).Count); // §261: 0이면 스킵
+            Assert.AreEqual(0, d.Draw(3).Count);
         }
 
         [Test]
         public void DrawThree_CapsAtThree()
         {
-            Assert.AreEqual(3, draw.Draw(3).Count); // 8 후보 → 3
+            Assert.AreEqual(3, draw.Draw(3).Count);
         }
 
         [Test]

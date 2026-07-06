@@ -38,7 +38,7 @@ namespace Game.Runtime.Motor
 
         private void Awake()
         {
-            if (!launchController) launchController = FindObjectOfType<LaunchController>();
+            if (!launchController) launchController = FindFirstObjectByType<LaunchController>();
             _mf = GetComponent<MeshFilter>();
             if (!_mf) _mf = gameObject.AddComponent<MeshFilter>();
             _mr = GetComponent<MeshRenderer>();
@@ -47,8 +47,10 @@ namespace Game.Runtime.Motor
             _mesh.MarkDynamic();
             _mf.mesh = _mesh;
             Shader shader = Shader.Find("Sprites/Default");
-            Material mat = new Material(shader != null ? shader : Shader.Find("Unlit/Transparent"));
-            mat.mainTexture = BuildCircleTexture();
+            Material mat = new Material(shader != null ? shader : Shader.Find("Unlit/Transparent"))
+                {
+                    mainTexture = BuildCircleTexture()
+                };
             _mr.sharedMaterial = mat;
             _mr.sortingOrder = sortingOrder;
             _mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -88,14 +90,12 @@ namespace Game.Runtime.Motor
                 }
             }
             _mesh.Clear();
-            if (_verts.Count > 0)
-            {
-                _mesh.SetVertices(_verts);
-                _mesh.SetUVs(0, _uvs);
-                _mesh.SetColors(_cols);
-                _mesh.SetTriangles(_tris, 0);
-                _mesh.RecalculateBounds();
-            }
+            if (_verts.Count <= 0) return;
+            _mesh.SetVertices(_verts);
+            _mesh.SetUVs(0, _uvs);
+            _mesh.SetColors(_cols);
+            _mesh.SetTriangles(_tris, 0);
+            _mesh.RecalculateBounds();
         }
 
         private void AddDot(Vector2 worldCenter, float half, ref int count)
@@ -117,7 +117,7 @@ namespace Game.Runtime.Motor
         {
             const int size = 32;
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-            float r = size * 0.5f;
+            const float r = size * 0.5f;
             Color32[] px = new Color32[size * size];
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)

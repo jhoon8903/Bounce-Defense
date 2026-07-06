@@ -3,7 +3,6 @@ using NUnit.Framework;
 
 namespace Game.Tests
 {
-    // 킬 기반 XP 레벨업(결정 B): 임계 도달 시 레벨업 + OnLevelUp 발화 + pending 큐, 나머지 XP 이월.
     public sealed class LevelModelTests
     {
         [Test]
@@ -41,7 +40,6 @@ namespace Game.Tests
         [Test]
         public void Growth_IncreasesNextThreshold()
         {
-            // base 5, growth 2 → L1→2 needs 5, L2→3 needs 7. 12 kills = L3.
             LevelModel m = new LevelModel(1, 5, 2);
             for (int i = 0; i < 12; i++) m.AddKill();
             Assert.AreEqual(3, m.Level);

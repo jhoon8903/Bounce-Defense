@@ -17,7 +17,7 @@ namespace Game.Runtime.Combat
         private void Awake()
         {
             if (!worldCamera) worldCamera = Camera.main;
-            if (!launchController) launchController = FindObjectOfType<LaunchController>();
+            if (!launchController) launchController = FindFirstObjectByType<LaunchController>();
         }
 
         private void Update()

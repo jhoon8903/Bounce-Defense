@@ -80,6 +80,7 @@ namespace Game.Runtime.Combat
             if (!(originEnemy is EnemyView originView) || originView.Model == null) return;
             int row = _grid.Model.WorldToCell(originView.Model.Position).Row;
             int cols = _grid.Cols;
+            _hub?.RaiseLaserRow(new Vector2(0f, _grid.CellToWorld(0, row).y)); // 가로 시안 빔 연출(폭 9칸 고정·x=0 중심·행 Y). 히트 여부와 무관 1회.
             _rowHitHandles.Clear();
             for (int col = 0; col < cols; col++)
             {
@@ -190,6 +191,7 @@ namespace Game.Runtime.Combat
         public void SpawnClusterBall(Vector2 origin, float damage)
         {
             if (damage <= 0f) return;
+            _hub?.RaiseClusterBurst(origin); // 수류탄 폭발 연출(분열 트리거 위치 — 특수볼이 파편처럼 튀어나옴)
             // 무작위 상향 방향(결정론 RNG). 아래로 쏘면 즉시 바닥수집돼 낭비 → 20~160°.
             float t = _random != null ? _random.NextFloat() : 0.5f;
             float angle = Mathf.Deg2Rad * (20f + t * 140f);

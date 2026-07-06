@@ -36,7 +36,6 @@ namespace Game.Runtime.Enemy
         private float _lastMatchDamage;
         private float _lastMatchRadius;
         private int _explosionDepth;
-        private readonly List<string> _explodeCache = new();
 
         public EnemyController(IEnemyFactory factory, IClock clock, GridController grid, CombatEventHub hub, DamageResolver resolver)
         {
@@ -47,7 +46,7 @@ namespace Game.Runtime.Enemy
             _resolver = resolver;
             _entrance = new EnemyEntranceChoreographer();
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
-            _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow, SetEnemyBurning);
+            _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow, SetEnemyBurning, SetEnemyFrozen);
         }
 
         protected override void OnInitialize() => _clock.OnFixedTick += OnClockFixedTick;
@@ -116,34 +115,48 @@ namespace Game.Runtime.Enemy
             if (!model.IsDead) return;
 
             Vector2 deathPos = model.Position; // Last Match 폭발 중심(Despawn 전 캡처)
+            // 인접 판정용 격자 배치도 Despawn 전 캡처 — Despawn하면 handle/placement가 사라짐.
+            BlockPlacement deadPlacement = default;
+            bool hasPlacement = _handles.TryGetValue(model.Id, out int deadHandle)
+                && _grid.TryGetPlacement(deadHandle, out deadPlacement);
             _hub?.RaiseKill();
+            _hub?.RaiseEnemyDeath(deathPos); // 돌 블럭 깨짐 연출(모든 킬 경로 공통 — 여기가 유일한 사망 지점)
             Despawn(model.Id);
-            TryLastMatchExplosion(deathPos); // 킬(직격·번·행뎀·분열·체인 무관) → 반경 폭발(보유 시)
+            // 킬(직격·번·행뎀·분열·체인 무관) → 죽은 적 풋프린트의 8방향 인접칸 적들에게 폭발뎀(보유 시).
+            if (hasPlacement) TryLastMatchExplosion(deadPlacement.Anchor, deadPlacement.Footprint, deathPos);
         }
 
-        // Last Match: 킬 위치 반경 안 적들에게 flat 2차뎀(무크리). 폭발 처치가 또 폭발을 부를 수 있어 depth 가드(§257).
-        // AoE 처치도 동일 HandleDamage 경유라 자연히 이어짐(§255). 사망한 적은 이미 Despawn돼 반경 집합에서 제외됨.
-        private void TryLastMatchExplosion(Vector2 center)
+        // Last Match: 죽은 적 풋프린트의 8방향 인접칸(대각 포함, 1칸 두께 링)을 격자에서 훑어, 점유한 적들에게 flat 2차뎀(무크리).
+        // 유클리드 반경 아님 = 격자 인접(레벨은 데미지만↑, 범위 고정 3x3). 큰 적은 풋프린트 링이라 중심점 근사 없음.
+        // 중복 셀은 적당 1회(2x2 적은 한 번만). 폭발 처치가 또 폭발을 불러 depth 가드(§257). hits는 지역이라 재귀 안전.
+        private void TryLastMatchExplosion(CellCoord anchor, Footprint fp, Vector2 center)
         {
-            if (_lastMatchDamage <= 0f || _lastMatchRadius <= 0f || _resolver == null) return;
+            if (_lastMatchDamage <= 0f || _resolver == null) return; // radius는 이제 범위 판정에 안 씀(장착 신호는 damage>0)
             if (_explosionDepth >= MaxExplosionDepth) return;
             _explosionDepth++;
 
-            float r2 = _lastMatchRadius * _lastMatchRadius;
-            _explodeCache.Clear();
-            foreach (KeyValuePair<string, EnemyModel> kv in _models)
+            _hub?.RaiseExplosion(center, _lastMatchRadius); // 붉은 폭발 연출(폭발 발생 지점마다 1회 · 체인이면 각 center)
+
+            // 풋프린트를 둘러싼 1칸 링 순회 → 점유 적 핸들 수집(중복 제거)
+            List<int> hits = new();
+            int c0 = anchor.Col, r0 = anchor.Row;
+            int w = Mathf.Max(1, fp.Width), h = Mathf.Max(1, fp.Height);
+            for (int c = c0 - 1; c <= c0 + w; c++)
+            for (int r = r0 - 1; r <= r0 + h; r++)
             {
-                EnemyModel m = kv.Value;
-                if (m == null || m.IsDead || m.IsEntering) continue; // 등장 중(무적)·사망 제외
-                if ((m.Position - center).sqrMagnitude <= r2) _explodeCache.Add(kv.Key);
+                if (c >= c0 && c < c0 + w && r >= r0 && r < r0 + h) continue; // 풋프린트 내부(자기 자리) 제외
+                if (c < 0 || c >= _grid.Cols || r < 0 || r >= _grid.Rows) continue; // 격자 밖
+                int occ = _grid.OccupantHandleAt(c, r);
+                if (occ != GridMap.Empty && !hits.Contains(occ)) hits.Add(occ);
             }
 
-            for (int i = 0; i < _explodeCache.Count; i++)
+            for (int i = 0; i < hits.Count; i++)
             {
-                if (!_views.TryGetValue(_explodeCache[i], out EnemyView v) || v.Model == null) continue; // 체인 중 이미 디스폰
+                if (!_grid.TryGetOccupant(hits[i], out IDamageable dmg) || !(dmg is EnemyView v) || v.Model == null) continue;
+                if (v.Model.IsDead || v.Model.IsEntering) continue; // 등장 중(무적)·사망 제외
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
-                _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드)
+                _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드, hits 지역이라 안전)
                 if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero, BallSourceType.Normal); // 폭발 = 흰색·무방향(반동·임팩트 없음)
             }
 
@@ -178,6 +191,12 @@ namespace Game.Runtime.Enemy
         private void SetEnemyBurning(string id, bool on)
         {
             if (_views.TryGetValue(id, out EnemyView view) && view != null) view.SetBurning(on);
+        }
+
+        // 냉동 시각 상태(EnemyStatusSimulator) → 뷰의 서리 VFX on/off. 첫 냉동=on, 전 냉동 만료/디스폰=off.
+        private void SetEnemyFrozen(string id, bool on)
+        {
+            if (_views.TryGetValue(id, out EnemyView view) && view != null) view.SetFrozen(on);
         }
 
         // 번 초당 틱: 2차 데미지(flat·무크리·무버프)를 동일 DamageResolver로 적용 → 숫자표기·사망 이벤트 통일.
