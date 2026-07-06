@@ -1,131 +1,160 @@
 # 통통 디펜스 : 핀볼 마스터 — Stage 1 재구현
 
-PurpleCow 클라이언트 프로그래머 채용 과제. 〈통통 디펜스: 핀볼 마스터〉 1스테이지의 핵심
-게임플레이(볼 발사·물리 반사·데미지, 12웨이브, 로그라이크 3택, 승패 처리)를 Unity로 재구현한다.
+PurpleCow 클라이언트 프로그래머 채용 과제. 서비스 중인 〈통통 디펜스: 핀볼 마스터〉의 **1스테이지 핵심 게임플레이**를 Unity로 재구현했습니다.
 
-- **엔진**: Unity 6000.3.10f1 · **타깃**: Android
-- **핵심 설계 원칙**: *데미지/스킬/드로우 수학은 Rigidbody를 절대 만지지 않는다* — 볼 이동은
-  순수 레이캐스트 모터(등속·터널링 불가·미리보기=실제 시뮬레이션), 데미지는 순서화된 파이프라인.
-
----
-
-## ⚠️ 구현 현황 (진행 중 — 6단계 로드맵 중 Phase 1 완료)
-
-이 저장소는 개발 중이며, 아래 표가 현재 실제 구현 상태다. 미구현 항목을 완료로 표기하지 않는다.
-
-| 영역 | 상태 | 비고 |
-|---|---|---|
-| 볼 물리(발사·반사·내부 바운스) | ✅ 구현·실측 | `KinematicRaycastMotor`, solid `BoxCollider2D` 내부 반사 |
-| 데미지 파이프라인(6단계, §데미지 공식) | ✅ 구현·실측 | `DamageResolver` + `ModifierRegistry`(빈 상태 검증됨) |
-| DI/오브젝트풀/이벤트 허브 | ✅ 구현 | VContainer, `IPool`, `CombatEventHub` |
-| 캐릭터 조준 리그(터치) | ✅ 구현·실측 | `AnchorView` 터치 게이트 회전 |
-| 궤적 미리보기 | ✅ 구현 | 모터와 동일 수학(`MotorGeometry` 공유) |
-| 12웨이브 / 몬스터 스폰 | ⏳ 미구현 | Phase 2 |
-| 적 하강·충돌·처치 | 🟡 부분 | 더미 Enemy 처치까지 검증(수직 슬라이스), 정식 스폰 미구현 |
-| 로그라이크 3택 / 10스킬 | ⏳ 미구현 | Phase 3~4 |
-| 승패 결과 팝업·재시작 | ⏳ 미구현 | Phase 2 |
-| 전투 파이프라인 GameScene 배선 | ⏳ 미구현 | 현재 검증은 수직 슬라이스 씬에서 수행 |
-| 플레이 영상 / APK | ⏳ 미구현 | 제출 전 산출 |
+- **엔진**: Unity `6000.3.10f1` · **렌더**: URP(2D Renderer) · **타깃**: Android
+- **핵심 설계 원칙**: *데미지·스킬·드로우 수학은 물리 엔진(Rigidbody)을 절대 만지지 않는다.* 볼 이동은 순수 레이캐스트 모터(등속·터널링 불가·미리보기 = 실제 시뮬레이션), 데미지는 순서가 고정된 파이프라인, 스킬 수치는 전부 ScriptableObject 데이터.
 
 ---
 
 ## 1. 실행 방법
 
-1. Unity **6000.3.10f1** 로 이 프로젝트(`Bounce-Defense/`)를 연다.
-2. 패키지는 `Packages/manifest.json` 기준 자동 복원(VContainer, Input System 포함).
-3. 씬을 연다:
-   - `Assets/Project/GameScene.unity` — 본 게임 씬(현재 아레나 벽 + 캐릭터 셋업까지).
-   - `Assets/Project/VerticalSlice/Phase1_VerticalSlice.unity` — **코어 루프 실측용**.
-     노멀볼 발사 → 벽 바운스 → 더미 적 처치(데미지 파이프라인 경유)가 Play Mode에서 동작.
-4. Play. (입력: 드래그로 조준, 놓으면 발사 — 새 Input System 기반, 마우스·터치 통합.)
+### 에디터에서 실행
+1. Unity `6000.3.10f1` 로 프로젝트를 엽니다.
+2. `Assets/Project/GameScene.unity` 를 엽니다. (빌드 세팅에 등록된 유일한 씬)
+3. **Play**.
 
-> 현재 전투 파이프라인(런처/풀/DI 스코프)은 수직 슬라이스 씬에 배선되어 있고, 본 `GameScene`
-> 배선은 Phase 2에서 통합한다.
+### 조작
+- **조준**: 화면을 드래그하면 발사 각도가 정해집니다(수평 기준 **15°~165°** 아크). 캐릭터 위의 궤적 점선이 반사 경로를 미리 보여줍니다.
+- **발사**: 실시간 **연속 자동 발사**. 볼은 벽에서 반사되며 몬스터를 때리고, 바닥에 닿으면 캐릭터로 회수되어 다시 발사됩니다. (턴제 아님 — 과제 원작의 실시간 연속 모델)
+- **스킬 선택**: 웨이브 처치 수 조건을 채우면 3택 카드 UI가 뜹니다. 카드를 눌러 스킬을 획득/레벨업합니다.
 
----
+### APK 빌드 (Android)
+1. `File > Build Profiles` 에서 플랫폼을 **Android** 로 전환.
+2. `Player Settings > Configuration > Scripting Backend = IL2CPP`, `Target Architectures = ARM64`.
+3. **빌드 전 릴리스 정리**: `Player Settings > Scripting Define Symbols(Android)` 에서 **`FRAMEWORK_DEBUG` 를 제거**하세요. 이 심볼이 있으면 프레임워크 verbose 로그(`Verbose.D/W`)가 `[Conditional]` 스트립되지 않고 빌드에 포함됩니다. 제거하면 자동 스트립됩니다(코드 수정 불필요).
+4. **Build**.
 
-## 2. 주요 구현 내용
-
-### 아키텍처
-
-- **논리 레이어(네임스페이스)로 관심사 분리**: `Game.Core`(IRandom/IClock/풀), `Game.Combat`
-  (데미지 파이프라인), `Game.Events`(이벤트 허브), `Game.Runtime`(볼/런처/모터/조준),
-  `Game.Objects`(캐릭터 뷰), `Game.Skills.*`·`Game.Roguelike`(예정).
-- **단일 `Assembly-CSharp`**: 과제 규모에서 asmdef 경계는 이득보다 마찰이 커서 제거하고
-  네임스페이스로 레이어를 표현한다. 의존성 방향은 코드 리뷰로 확인(예: 데미지 로직은
-  `UnityEngine.Rigidbody`를 참조하지 않음).
-- **DI = VContainer**: 단일 `GameLifetimeScope`가 `IRandom`/`IClock`/`IPool`/`DamageResolver`/
-  `CombatEventHub`를 배선하고 씬 컴포넌트에 주입.
-
-### 볼 물리 — `KinematicRaycastMotor` (Rigidbody 미사용)
-
-- 매 스텝 `CircleCast` + 잔여거리 소비 루프 + `Vector2.Reflect`. **등속 정확**, **터널링 불가**,
-  **궤적 미리보기 = 실제 시뮬레이션**(`TrajectoryPreview`가 모터와 동일한
-  `MotorGeometry` 수학 공유 → 미리보기와 실제 궤적이 어긋나지 않음).
-- **아레나 벽 = 단일 solid `BoxCollider2D` 내부 반사**: solid 박스는 레이캐스트로 내부를 볼 수
-  없어(내부 캐스트가 거리 0을 반환) `Physics2D.OverlapPoint`로 "공이 박스 안에 있음"만 판별하고,
-  안쪽 AABB(반지름만큼 수축)까지의 거리를 해석적으로 계산해 축 반전으로 반사한다. 4벽 밀폐.
-  4각도 × 900~1200스텝 실측: 전부 아레나 안에 갇히고 속도 일정, 탈출 0회.
-
-### 데미지 파이프라인 — `DamageResolver` (순서화·개방-폐쇄)
-
-- 6단계: **Base → Additive% → 치명타 확률(roll) → 치명타 데미지(×1.5) → 반올림(최종만) → Apply**.
-- 과제 기본값 반영: 노멀 볼 데미지 **8**, 기본 치명타 확률 **0%**, 치명타 데미지율 **+50%(×1.5)**.
-- 스킬은 `DamageResolver`를 수정하지 않고 `ModifierRegistry`에 `IDamageModifier`를 **등록만**
-  하여 확장(개방-폐쇄). 스킬 0개인 현재는 파이프라인이 "빈 상태"로 통과함을 실측(Additive%=0,
-  크리 0%)으로 검증 — 스킬 추가 시 이 지점에 얹힌다.
-- 이벤트는 `CombatEventHub`(OnLaunch/WallBounce/Hit/Kill) 옵저버로 발행 → 사운드/연출/집계가
-  데미지 로직과 분리.
-
-### 캐릭터 조준 — `AnchorView` (모바일 터치)
-
-- 리그: `Char`(Body, 고정) → `AnchorView`(피벗) → `Head`/`Staff`. Anchor만 Z 회전하고 자식이
-  따라 돌아 조준 방향을 바라본다.
-- **모바일 규칙**: 각은 **누르는 중에만** 갱신(호버 추적 아님), 손을 떼면 마지막 각 유지.
-  발사와 동일한 상단 호(15°~165°) 클램프 → 캐릭터가 실제 발사 방향과 항상 일치.
+> 에디터 전용 개발 훅(`LaunchController`의 자동 발사 등)은 이미 `#if UNITY_EDITOR` 로 격리되어 빌드에는 포함되지 않습니다.
 
 ---
 
-## 3. 가산점 구현
+## 2. 주요 구현 내용 — 과제 필수 항목 매핑
 
-> 과제의 "구현 제외" 항목(튜토리얼·배속·보스·자동조준·선택지 다시뽑기·융합)은 구현하지 않는다.
+| 과제 필수 항목 | 구현 | 위치 |
+|---|---|---|
+| **1. 인게임 핀볼 로직** — 볼 발사·물리 기반 반사 | 순수 레이캐스트 모터. 등속 원형 스윕캐스트로 벽 반사·터널링 방지, 바닥 접촉 시 반사 대신 캐릭터로 회수 | `KinematicRaycastMotor`, `BallController` |
+| ─ 몬스터 충돌 시 데미지 (노멀 **8**, 기본 치명타 **0%**, 치명타 데미지율 **50%**) | 순서 고정 데미지 파이프라인(기본→가산%→치명타→반올림). 노멀 볼 뎀 상수 8, 크리 배율 1.5 | `DamageResolver`, `ModifierRegistry`, `SkillRuntime` |
+| **2. 웨이브 시스템** — 총 12웨이브, 웨이브별 몬스터 스폰 | 데이터 주도 웨이브 진행. 각 웨이브는 빈 셀마다 채우는 **롤링 서브웨이브** 스폰 + 웨이브별 HP 램프 | `StageController`, `StageDefinition`(SO), `EnemyController` |
+| **3. 로그라이크 선택지** — 처치 수 조건 3택 UI | 킬 → XP → 레벨업 → 3택 드로우. 미보유 스킬은 Lv1만, 최대 보유 시 업그레이드 선택지만(액티브/패시브 별도 풀), 동일 카드 중복 없음(레벨업만) | `CardDrawService`, `PlayerLoadout`, `LevelModel`, `CardDraftController` |
+| ─ 보유 한도: 액티브 **4** / 패시브 **2** | 카테고리별 보유 캡 + 풀 분리 | `PlayerLoadout` |
+| **4. 삼택지 스킬 리스트** — 액티브 5 + 패시브 5, 각 Lv1~3 | 스킬 효과·레벨별 수치를 전부 SO 데이터로. 효과 종류별 파라미터 섹션(화상/냉동/레이저/분열/거울/성냥) | `SkillDefinition`(SO), `SkillDatabase`, 각 볼 모듈/`*Modifier` |
+| **5. 게임 결과 처리** — 성공/실패 팝업 + 재시작 | 승리(마지막 웨이브 클리어)·패배(방어선 침범으로 베이스 HP 0) 시 팝업. 재시작 = 씬 리로드 | `ResultViewController`, `ClearView`, `DefeatedView`, `HpBarView` |
 
-- **반사 궤적 미리보기**(`TrajectoryPreview`): 조준 중 실제 바운스 경로를 실시간 표시. 모터와
-  **동일 수학**을 공유해 미리보기와 실제 궤적이 픽셀 단위로 일치 — 조준 게임필의 핵심.
-- (예정) 스킬·게임필·연출 등 추가 항목은 구현하는 대로 이 절에 상세 기재한다.
+### 스킬 밸런스 (과제 스펙 그대로)
+**액티브(볼) — 볼 데미지 Lv1/2/3**
+- 🔥 파이어: 21/24/27 · 타격 시 화상 4/4.5/5초(초당 8/10/12, 최대 3/4/5중첩)
+- ❄️ 아이스: 25/37/50 · 30/35/40% 확률로 5/6/7초 냉동(이동 10/15/20%↓, 추가뎀 10/15/20%)
+- ⚡ 레이저: 11/15/19 · 같은 행 모든 적에게 7/11/15
+- 👻 고스트: 14/21/28 · 적 관통
+- 💣 클러스터: 27/30/33 · 타격 시 40/50/60% 확률로 10/15/20 데미지 특수볼 생성
+
+**패시브 Lv1/2/3**
+- 따뜻한 양철 심장: 모든 노멀 볼 추가 데미지 20/30/40%
+- 마법 거울: 볼이 벽에 튕길 때마다 다음 타격 데미지 20/40/60%
+- 자수정 단검: 적 전면 타격 시 치명타 확률 10/20/30% (타격당 1회)
+- 에메랄드 단검: 적 후면 타격 시 치명타 확률 20/30/40% (타격당 1회)
+- 마지막 성냥: 적 사망 시 폭발해 인접 적에게 10/20/30
 
 ---
 
-## 4. AI 활용 여부
+## 3. 아키텍처
 
-이 프로젝트는 **Claude Code (Claude Opus) + MCP for Unity**를 적극 활용해 개발했다.
+프레임워크는 개발자의 기존 상용 프로젝트에서 검증된 패턴을 따릅니다.
 
-- **활용 방식**: 아키텍처·설계 결정 검토, C# 구현, Unity 에디터 자동 조작(씬/컴포넌트/프리팹),
-  그리고 **`execute_code`로 에디터 안에서 물리·수학을 직접 실측 검증**(예: 벽 내부 반사가
-  실제로 공을 가두는지 수백 스텝 시뮬레이션, 조준 각 계산 검증).
-- **판단·결정은 개발자가 수행**: 벽 충돌 방식(박스 유지 + 모터 수정), 아레나 밀폐, asmdef 제거
-  등 되돌리기 어려운 결정은 트레이드오프를 놓고 개발자가 선택했다.
-- **검증 원칙**: 컴파일/콘솔 클린 확인에 그치지 않고 Play Mode·`execute_code`로 실제 동작을
-  관측해 확인(정적 검사 통과 ≠ 동작 보장).
+```
+MVC  +  Observable(Model→View)  +  Object Pool  +  단일 IClock 업데이트 루프  +  Factory  +  VContainer DI
+```
+
+- **모든 게임플레이 시스템은 MonoBehaviour가 아니라 순수 C# 컨트롤러**(`BaseController`)입니다. `IClock` 하나가 `OnTick/OnFixedTick` 을 팬아웃해 구동 → per-object `Update()` 디스패치 오버헤드 제거, 결정론적 순서, 전역 정지(`GameSpeed=0`)가 곱셈 한 번.
+- **엔티티(볼·적)는 Factory + Pool + Model/View** 로만 생성. 컨트롤러는 `new`/`Instantiate` 를 직접 하지 않고 명단(Dictionary)만 소유.
+- **데미지는 단일 `DamageResolver` 파이프라인** 을 통과(직격/2차/화상/행뎀/폭발/분열 모두 동일 경로) → 숫자 표기·치명타·사망 이벤트가 한 곳에서 일관.
+- **스킬은 데이터(SkillDefinition SO) + 런타임 브리지(`SkillRuntime`)** 로 분리. 로드아웃 변경 시 볼 로스터·패시브 모디파이어를 밀어넣음.
+- **의존성 조립은 `GameLifetimeScope`(VContainer)** 한 곳. 씬 컴포넌트는 nullable 주입 — 미배선이어도 코어 루프는 동작.
+
+### 어셈블리(asmdef) 구성
+| 어셈블리 | 책임 |
+|---|---|
+| `Game.Core` | 프레임워크(Clock/Pool/MVC/Random) + 런타임(볼·적·스테이지·모터·전투·이벤트·UI·부트스트랩) |
+| `Game.Skills` | 스킬 데이터(`SkillDefinition`/`SkillDatabase`/`SkillEffectKind`) |
+| `Game.Roguelike` | 순수 로그라이크 로직(카드 드로우·로드아웃·레벨) |
+| `Game.Tests` | EditMode 단위 테스트 |
 
 ---
 
-## 부록 — 폴더 구조
+## 4. 가산점 구현 — 핵심 재미 극대화
+
+과제의 필수 로직을 넘어, "핀볼 디펜스의 손맛과 빌드업"을 살리는 데 집중했습니다.
+
+**게임플레이 깊이**
+- **실시간 연속 발사 + 자동 결원 채우기 로스터**: 획득한 액티브 스킬만큼 비행 중 볼 구성이 자동 수렴(“액티브가 볼을 추가한다”). 턴 대기 없는 끊김 없는 핀볼 흐름.
+- **6종 볼 타입별 물리·데미지·온-히트 모듈**: 관통(고스트)·행 광역(레이저)·분열(클러스터)·상태이상(파이어 화상/아이스 냉동)·벽튕김 보너스(거울)·전후면 치명타(단검) — 각기 다른 공략 리듬.
+
+**연출·피드백 (게임의 “주스”)**
+- **결과창 볼별 데미지 집계(DTResult)**: 이번 판에서 **어떤 스킬이 얼마나 기여했는지**를 아이콘+수치로 내림차순 표시(K/M/B 약식). 노멀 볼까지 하나의 스킬 항목으로 집계.
+- **승/패 결과 연출**: 성공(Shine 회전·별 3개 스태거 슬라이드·잔여 HP%)/실패(적 돌진 → 캐릭터 분해 사망 → 피 연출) 2분할 팝업. 정지 중에도 도는 unscaled 애니메이션.
+- **원소별 전투 VFX**: 임팩트/트레일, 아이스 서리 틴트, 파이어 불꽃, 레이저 빔(LineRenderer), 클러스터 수류탄, 마지막 성냥 격자 폭발, 사망 시 돌 블록 깨짐.
+- **피격 피드백**: 풀링된 플로팅 데미지 숫자(크리 = 붉은색·팝) + 적 화이트 플래시(전용 셰이더).
+- **궤적 미리보기**: 단일 프로시저 메시(드로우콜 1개) 점선으로 반사 경로 예측.
+
+**성능 최적화** (아래 §6 상세)
+- 오브젝트 풀링(볼·적·데미지 텍스트·모터·VFX), 물리 캐스트 NonAlloc화, 단일 업데이트 루프, 스프라이트 아틀라스 도메인 분리.
+
+---
+
+## 5. AI 활용 여부
+
+이 과제는 **Anthropic의 에이전트형 코딩 도구 Claude Code(모델: Claude Opus)** 를 적극 활용해 진행했습니다. 투명하게 밝힙니다.
+
+- **활용 방식**: 설계 논의(아키텍처 선택지 비교), 코드 생성·리팩터, 핫패스 성능 감사, EditMode 테스트 및 헤드리스 검증(Unity MCP 연동)을 AI로 가속했습니다.
+- **개발자가 주도한 것**: 게임 코어 루프·훅·**밸런스 수치(과제 스펙 준수)**·설계 방향·되돌리기 비싼 결정(데이터 포맷·핵심 아키텍처)은 개발자가 판단하고, AI에는 “무엇이 가능한가”를 맡겼습니다.
+- **검증 원칙**: AI가 만든 코드는 컴파일 0에러 + EditMode 26/26 + 헤드리스 로직 프로브 + 개발자 플레이 확인의 게이트를 통과한 것만 반영했습니다. 프레임워크 패턴은 개발자의 기존 상용 프로젝트에서 검증된 것을 재사용했습니다.
+
+---
+
+## 6. 성능 최적화
+
+모바일(IL2CPP/Android) 타깃에 맞춰 **핫패스 GC 할당 제거**와 **드로우콜 배치**를 중심으로 정리했습니다. (겉모습을 바꾸는 변경은 배제 — 순수 성능/behavior-safe)
+
+**스크립트 (GC 할당 제거, 동작 불변)**
+- 볼 물리·궤적 미리보기의 `Physics2D.CircleCastAll`(매 스텝·매 프레임 배열 할당) → `ContactFilter2D` 기반 **NonAlloc 캐스트 + 재사용 버퍼**. (기존 캐스트와 결과 동치 확인)
+- `KinematicRaycastMotor` 를 스폰마다 `new` 하던 것 → **Stack 풀 재사용**(Init이 상태 전체 리셋).
+- 적 하강 정렬의 매 틱 델리게이트 할당 → **Comparison 캐시**(생성자 1회).
+- 마지막 성냥 폭발의 매 킬 리스트 할당 → **depth별 재사용 버퍼**(체인 재귀 안전).
+- 오브젝트 풀링: 볼·적·데미지 텍스트·VFX 임팩트는 전부 풀에서 재사용.
+- 단일 `IClock` 업데이트 루프로 per-MonoBehaviour `Update()` 디스패치 제거.
+
+**렌더 (드로우콜 배치, 픽셀 불변)**
+- **스프라이트 아틀라스 도메인 분리**: 게임플레이(볼·몬스터·캐릭터·스킬 아이콘)와 UI를 각각 아틀라스로 묶어 드로우콜 배치. rotation/tight-packing off + padding으로 블리딩 방지.
+- URP 파이프라인의 2D 미사용 기능(Mixed Lighting·Lens Flare) off → 셰이더 변형·빌드 크기 감소. SRP Batcher on, HDR/MSAA/그림자 off(2D 모바일 최적).
+
+---
+
+## 7. 프로젝트 구조
 
 ```
 Assets/Project/
-  Scripts/
-    Game.Core/        IRandom·IClock·오브젝트풀·Observer
-    Game.Combat/      HitContext·DamageResolver(6단계)·ModifierRegistry
-    Game.Events/      CombatEventHub
-    Game.Runtime/     Motor(KinematicRaycastMotor·TrajectoryPreview·MotorGeometry)·Ball·Launcher·Aim·GameLifetimeScope
-    Game.Objects/     캐릭터 뷰(AnchorView 등)
-    Game.Skills.*/    (예정) 스킬 데이터·모듈
-    Game.Roguelike/   (예정) 로드아웃·카드 드래프트
-  GameScene.unity          본 게임 씬
-  VerticalSlice/           코어 루프 실측 씬
-  Prefabs/ · Configs/
-docs/개발플랜.md           설계 계획 + 세션 개발 로그(§11)
+├─ Scripts/
+│  ├─ Game.Core/       # 프레임워크 + 런타임(Combat·Enemy·Stage·Motor·Grid·UI·Bootstrap·Events)
+│  ├─ Game.Skills/     # SkillDefinition·SkillDatabase·SkillEffectKind (SO 데이터)
+│  ├─ Game.Roguelike/  # CardDrawService·PlayerLoadout·LevelModel (순수 로직)
+│  └─ Game.Tests/      # EditMode 단위 테스트
+├─ Configs/            # SO 에셋(스킬·적·볼·스테이지·그리드)
+├─ Prefabs/            # 볼·적·파티클·UI 프리팹
+├─ Sources/            # 텍스처(GameTextures·UITextures) + 스프라이트 아틀라스
+└─ GameScene.unity     # 유일한 플레이 씬
 ```
 
-설계 근거·결정 이력·세션별 진행은 `docs/개발플랜.md`에 상세 기록되어 있다.
+---
+
+## 8. 테스트 / 검증
+
+- **EditMode 단위 테스트 26개**(카드 드로우·레벨·로드아웃 순수 로직) — 전부 통과.
+- **헤드리스 검증**: Unity MCP로 컴파일·에디터 상태·로직 프로브(스킬 조회·데미지 매핑·물리 캐스트 동치)를 자동 확인.
+- 룩·손맛(연출·밸런스 체감)은 개발자 플레이 테스트로 최종 확인.
+
+---
+
+## 9. 미구현 (과제 제외 항목 준수)
+
+과제에서 “구현 제외”로 명시된 항목은 의도적으로 넣지 않았습니다: 튜토리얼 · 배속 기능 · 1스테이지 보스 · 자동 조준 · 선택지 다시뽑기 · 융합 시스템.
