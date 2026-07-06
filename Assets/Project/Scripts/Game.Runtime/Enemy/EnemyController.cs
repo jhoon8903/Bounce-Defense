@@ -170,7 +170,7 @@ namespace Game.Runtime.Enemy
                 if (v.Model.IsDead || v.Model.IsEntering) continue; // 등장 중(무적)·사망 제외
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
-                _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드, hits 지역이라 안전)
+                _resolver.Resolve(ref ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드, hits 지역이라 안전)
                 if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero, BallSourceType.Normal, ctx.Kind); // 폭발 = 흰색·무방향(반동·임팩트 없음)
             }
 
@@ -220,7 +220,7 @@ namespace Game.Runtime.Enemy
             if (_resolver == null || !_views.TryGetValue(id, out EnemyView view) || view.Model == null) return;
             Vector2 pos = view.Model.Position;                 // Resolve 전 캡처(살상 번틱 디스폰 대비)
             HitContext ctx = HitContext.Secondary(view, BallSourceType.Fire, DamageKind.Burn, dps);
-            _resolver.Resolve(ctx);
+            _resolver.Resolve(ref ctx);
             if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, BallSourceType.Fire, ctx.Kind); // 번 = 흰색·무방향(반동·임팩트 없음)
         }
 

@@ -16,9 +16,9 @@ namespace Game.Combat
             _random = random;
         }
 
-        public void Resolve(HitContext ctx)
+        public void Resolve(ref HitContext ctx)
         {
-            if (ctx?.Target == null) return;
+            if (ctx.Target == null) return;
             float working = ctx.BaseDamage;
             if (ctx.CanReceiveGlobalModifiers)
             {

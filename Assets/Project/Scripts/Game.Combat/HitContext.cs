@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace Game.Combat
 {
-    public sealed class HitContext
+    // struct(값 타입): 매 적중 힙할당 제거(핫패스 GC). DamageResolver.Resolve는 ref로 받아 IsCrit/FinalDamage를 호출부 복사에 기록.
+    public struct HitContext
     {
         public IDamageable Target;
         public BallSourceType SourceBallType;
