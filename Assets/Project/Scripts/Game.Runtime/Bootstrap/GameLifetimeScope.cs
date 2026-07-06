@@ -20,37 +20,34 @@ namespace Game.Runtime.Bootstrap
 {
     public sealed class GameLifetimeScope : LifetimeScope
     {
-        [Header("Pool")]
-        [SerializeField] private PoolConfiguration[] poolConfigs; // EnemyView 등 GamePool 대상
-        [SerializeField] private BallConfig[] ballConfigs;         // 볼 타입별 config(각자 프리팹) — BallFactory가 타입별 풀 소유
-        [SerializeField] private ImpactConfig[] impactConfigs;     // 볼 타입별 임팩트 파티클 config — CombatVfxController가 타입별 풀 소유
-        [SerializeField] private ImpactConfig explosionConfig;     // Last Match 붉은 폭발 파티클 config(#5) — 볼 타입 무관 단일 풀. 미배선 시 폭발 무연출.
-        [SerializeField] private ImpactConfig clusterConfig;       // Cluster 분열 수류탄 폭발 config — 볼 타입 무관 단일 풀. 미배선 시 무연출.
-        [SerializeField] private ImpactConfig deathConfig;         // 적 사망 돌 깨짐 config(#3) — 볼 타입 무관 단일 풀. 미배선 시 무연출.
-        [SerializeField] private ImpactConfig laserConfig;         // Laser 행 빔 파티클 config(#7) — 볼 타입 무관 단일 풀. 미배선 시 빔 무연출.
-        [SerializeField] private ImpactConfig bloodConfig;         // 방어선 침범 피 연출 config(#3) — 미배선 시 무연출.
+        [Header("Data (단일 config 컨테이너 — 데이터 주도)")]
+        [SerializeField] private GameConfigContainer config; // 전 config SO의 단일 출처(WigglePuzzle MConfigContainer 패턴)
+
+        [Header("Scene Refs (RegisterComponent 주입 — 씬 오브젝트라 컨테이너에 못 담음)")]
         [SerializeField] private Transform poolRoot;
-
-        [Header("Scene Refs (RegisterComponent로 주입)")]
         [SerializeField] private LaunchController launchController;
-        [SerializeField] private CharView charView; // Char 비주얼(조준/반동) — CharController가 IClock 틱으로 구동
-
-        [Header("Grid")]
-        [SerializeField] private GridConfig gridConfig;
+        [SerializeField] private CharView charView;           // Char 비주얼(조준/반동) — CharController가 IClock 틱 구동
         [SerializeField] private Transform gridAnchor;        // 씬의 빈 'Grid' 오브젝트 (0,1.27) = 그리드 중심
-        [SerializeField] private GridDebugView gridDebugView; // 선택: 기즈모 시각화(같은 오브젝트에 부착 가능)
-
-        [Header("Stage")]
-        [SerializeField] private StageDefinition stageDefinition; // 웨이브/베이스HP 데이터
-
-        [Header("Roguelike (Phase 3 카드 드래프트)")]
-        [SerializeField] private SkillDatabase skillDatabase;         // 10스킬 풀(액티브5/패시브5)
+        [SerializeField] private GridDebugView gridDebugView; // 선택: 기즈모 시각화
         [SerializeField] private LevelProgressView levelProgressView; // XP 진행도 바
         [SerializeField] private CardSelectView cardSelectView;       // 3택 카드 패널
-        [SerializeField] private int rngSeed = 12345;                 // 시드 RNG(§265 결정론·재현)
 
         protected override void Configure(IContainerBuilder builder)
         {
+            // 데이터 주도: 모든 config는 단일 컨테이너에서 나온다. 로컬 별칭으로 아래 배선 본문은 그대로 유지.
+            if (config == null) config = ScriptableObject.CreateInstance<GameConfigContainer>(); // 미배선 방어(접근자는 null/빈배열, 하위 가드가 처리)
+            PoolConfiguration[] poolConfigs = config.PoolConfigs;
+            BallConfig[] ballConfigs = config.BallConfigs;
+            ImpactConfig[] impactConfigs = config.ImpactConfigs;
+            ImpactConfig explosionConfig = config.ExplosionConfig;
+            ImpactConfig clusterConfig = config.ClusterConfig;
+            ImpactConfig deathConfig = config.DeathConfig;
+            ImpactConfig laserConfig = config.LaserConfig;
+            ImpactConfig bloodConfig = config.BloodConfig;
+            GridConfig gridConfig = config.GridConfig;
+            StageDefinition stageDefinition = config.StageDefinition;
+            SkillDatabase skillDatabase = config.SkillDatabase;
+            int rngSeed = config.RngSeed;
             builder.RegisterInstance(new GameClock()).As<IClock>();
             builder.RegisterInstance(new GamePool(poolConfigs)).As<IPool>();
             builder.Register<ModifierRegistry>(Lifetime.Singleton); // 패시브 데미지 모디파이어 컬렉션(SkillRuntime이 갱신)

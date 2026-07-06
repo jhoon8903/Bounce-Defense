@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9f97aac772e641ac90bf1811d556f93, type: 3}
+  m_Name: GameConfigContainer
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.Bootstrap.GameConfigContainer
+  poolConfigs:
+  - {fileID: 11400000, guid: 13fc7b0afbfa54d7f9867f0c9210a20f, type: 2}
+  - {fileID: 11400000, guid: edb489e1856204c23a79487af84dabcc, type: 2}
+  ballConfigs:
+  - {fileID: 11400000, guid: 995604bac7a5b435e84365aa37a382a4, type: 2}
+  - {fileID: 11400000, guid: a2214defdc1384c949441970e7265354, type: 2}
+  - {fileID: 11400000, guid: 478f1313f01304e559358848d09ad428, type: 2}
+  - {fileID: 11400000, guid: a5872f3a4a5854ed2826ef91b510371f, type: 2}
+  - {fileID: 11400000, guid: b49860d4f3ea742bdaefeae8ed0bd0cf, type: 2}
+  - {fileID: 11400000, guid: 3ad4d84a22df14083acc425bccf35eaa, type: 2}
+  impactConfigs:
+  - {fileID: 11400000, guid: ca276597b16664b27902f94426aa80a6, type: 2}
+  - {fileID: 11400000, guid: 00b1f06a50e254149916f77c4e0e4996, type: 2}
+  explosionConfig: {fileID: 11400000, guid: c62abe47fe1aa4bde85cfc1c05631970, type: 2}
+  clusterConfig: {fileID: 11400000, guid: a510adbff675841a6a2ef7ce3f1e2914, type: 2}
+  deathConfig: {fileID: 11400000, guid: 3830358a3d715434fa2e7345a7383dc7, type: 2}
+  laserConfig: {fileID: 11400000, guid: ed359647f4a8c4a81a1a1fed7a3752f7, type: 2}
+  bloodConfig: {fileID: 11400000, guid: 787d8a947a458439f9a8ad72ee2e64b4, type: 2}
+  gridConfig: {fileID: 0}
+  stageDefinition: {fileID: 11400000, guid: 941bcfdd1d9664935847da7c30f80a05, type: 2}
+  skillDatabase: {fileID: 11400000, guid: 50a1a790b152446849c010d3b0462d84, type: 2}
+  rngSeed: 12345
