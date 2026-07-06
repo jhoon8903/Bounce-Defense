@@ -2,6 +2,7 @@ using Game.Core.Clock;
 using Game.Core.Mvc;
 using Game.Runtime.Combat;
 using Game.Runtime.Stage;
+using Game.Skills;
 
 namespace Game.Runtime.UI
 {
@@ -16,14 +17,16 @@ namespace Game.Runtime.UI
         private readonly ClearView _clearView;
         private readonly DefeatedView _defeatedView;
         private readonly DamageStats _damageStats;
+        private readonly SkillDatabase _skillDatabase;
 
-        public ResultViewController(StageController stage, IClock clock, ClearView clearView, DefeatedView defeatedView, DamageStats damageStats)
+        public ResultViewController(StageController stage, IClock clock, ClearView clearView, DefeatedView defeatedView, DamageStats damageStats, SkillDatabase skillDatabase)
         {
             _stage = stage;
             _clock = clock;
             _clearView = clearView;
             _defeatedView = defeatedView;
             _damageStats = damageStats;
+            _skillDatabase = skillDatabase;
         }
 
         protected override void OnInitialize()
@@ -43,7 +46,7 @@ namespace Game.Runtime.UI
             if (state == StageState.Won)
             {
                 _clock.GameSpeed = 0f;
-                if (_clearView != null) _clearView.Show(_stage.Base.RemainingPercent, _damageStats); // ClearView가 자식 DTResult까지 채움
+                if (_clearView != null) _clearView.Show(_stage.Base.RemainingPercent, _damageStats, _skillDatabase); // ClearView가 자식 DTResult까지 채움
             }
             else if (state == StageState.Lost)
             {

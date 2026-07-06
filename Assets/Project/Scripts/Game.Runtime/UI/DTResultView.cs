@@ -9,15 +9,14 @@ namespace Game.Runtime.UI
     // DamageStats를 데미지 내림차순으로 채운다. 아이콘/이름은 SkillDatabase에서 EffectKind로 조회(수동 매핑 없음).
     public sealed class DTResultView : MonoBehaviour
     {
-        [SerializeField] private SkillDatabase skillDatabase; // 아이콘/이름 조회원(에셋 드래그)
         [SerializeField] private Transform rowContainer;      // 행 부모(VerticalLayoutGroup 권장)
         [SerializeField] private DTResultRow rowTemplate;     // 행 템플릿(복제됨 — 비활성 권장)
 
         private readonly List<DTResultRow> _rows = new();
         private readonly List<KeyValuePair<SkillEffectKind, long>> _sorted = new();
 
-        // 결과 표시 시 호출(ClearView). 데미지 내림차순 행 생성.
-        public void Populate(DamageStats stats)
+        // 결과 표시 시 호출(ClearView). 데미지 내림차순 행 생성. 아이콘/이름은 주입된 SkillDatabase에서 EffectKind로 조회(수동 매핑 없음).
+        public void Populate(DamageStats stats, SkillDatabase db)
         {
             Clear();
             if (stats == null || rowContainer == null || rowTemplate == null) return;
@@ -31,32 +30,13 @@ namespace Game.Runtime.UI
             for (int i = 0; i < _sorted.Count; i++)
             {
                 SkillEffectKind kind = _sorted[i].Key;
-                SkillDefinition def = FindSkill(kind);
+                SkillDefinition def = db != null ? db.FindByEffectKind(kind) : null;
                 Sprite icon = def != null ? def.Icon : null;
                 DTResultRow row = Instantiate(rowTemplate, rowContainer);
                 row.gameObject.SetActive(true);
                 row.Bind(icon, _sorted[i].Value);
                 _rows.Add(row);
             }
-        }
-
-        // SkillDatabase에서 EffectKind로 스킬 정의 조회(액티브+패시브). None(노멀 볼)은 정의 없음.
-        private SkillDefinition FindSkill(SkillEffectKind kind)
-        {
-            if (skillDatabase == null || kind == SkillEffectKind.None) return null;
-            for (int i = 0; i < skillDatabase.ActiveSkills.Count; i++)
-            {
-                SkillDefinition s = skillDatabase.ActiveSkills[i];
-                if (s != null && s.EffectKind == kind) return s;
-            }
-
-            for (int i = 0; i < skillDatabase.PassiveSkills.Count; i++)
-            {
-                SkillDefinition s = skillDatabase.PassiveSkills[i];
-                if (s != null && s.EffectKind == kind) return s;
-            }
-
-            return null;
         }
 
         private void Clear()

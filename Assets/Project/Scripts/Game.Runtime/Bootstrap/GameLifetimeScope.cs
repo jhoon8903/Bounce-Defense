@@ -113,7 +113,7 @@ namespace Game.Runtime.Bootstrap
             DefeatedView defeatedView = FindFirstObjectByType<DefeatedView>();
             builder.Register(resolver => new ResultViewController(
                 resolver.Resolve<StageController>(), resolver.Resolve<IClock>(), clearView, defeatedView,
-                resolver.Resolve<DamageStats>()), Lifetime.Singleton);
+                resolver.Resolve<DamageStats>(), resolver.Resolve<SkillDatabase>()), Lifetime.Singleton);
 
             // Roguelike(Phase 3): 킬 XP 레벨업 → 3택 카드 드래프트. 순수 로직(로드아웃/드로우/레벨)은 asmdef,
             // 뷰는 씬 컴포넌트(RegisterComponent). 뷰/DB 미배선이면 드래프트 비활성(코어 루프는 그대로 동작).

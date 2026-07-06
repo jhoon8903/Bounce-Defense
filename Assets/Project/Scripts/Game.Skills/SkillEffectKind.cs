@@ -15,5 +15,7 @@ namespace Game.Skills
         AmethystDagger,
         EmeraldDagger,
         LastMatch,
+        // 노멀(무스킬) 볼 — 결과창 집계 표시용. 반드시 맨 끝(직렬화 값 안정).
+        NormalBall,
     }
 }

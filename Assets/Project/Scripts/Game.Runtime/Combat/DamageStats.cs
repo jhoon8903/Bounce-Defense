@@ -53,7 +53,7 @@ namespace Game.Runtime.Combat
                         case BallSourceType.Laser: return SkillEffectKind.LaserBall;
                         case BallSourceType.Ghost: return SkillEffectKind.GhostBall;
                         case BallSourceType.Cluster: return SkillEffectKind.ClusterBall;
-                        default: return SkillEffectKind.None; // 노멀 볼(스킬 아님, 양철 보정 포함)
+                        default: return SkillEffectKind.NormalBall; // 노멀 볼(집계 항목). 양철·거울 보정도 노멀 직격에 녹아 여기 귀속.
                     }
             }
         }

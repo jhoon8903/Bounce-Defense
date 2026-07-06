@@ -1,4 +1,5 @@
 using Game.Runtime.Combat;
+using Game.Skills;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -44,14 +45,14 @@ namespace Game.Runtime.UI
             HideImmediate();
         }
 
-        public void Show(float remainingPercent, DamageStats stats)
+        public void Show(float remainingPercent, DamageStats stats, SkillDatabase db)
         {
             if (_shown) return;
             _shown = true; _t = 0f;
             if (group != null) { group.blocksRaycasts = true; group.interactable = true; }
             for (int i = 0; i < _stars.Length; i++) if (_stars[i] != null) _stars[i].anchoredPosition = Vector2.zero; // 시작점=중앙
             if (remainingText != null) remainingText.SetText("{0}%", Mathf.RoundToInt(Mathf.Clamp01(remainingPercent) * 100f));
-            if (dtResult != null) dtResult.Populate(stats); // 자식 DTResult에 스킬별 데미지 채움
+            if (dtResult != null) dtResult.Populate(stats, db); // 자식 DTResult에 스킬별 데미지 채움
             gameObject.SetActive(true);
         }
 

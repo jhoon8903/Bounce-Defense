@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d65ef8e5bbda94bf89380ce37bdf1a62, type: 3}
+  m_Name: SkillDef_normal_ball
+  m_EditorClassIdentifier: Game.Skills::Game.Skills.SkillDefinition
+  skillId: normal_ball
+  displayName: "\uB178\uBA40 \uBCFC"
+  category: 0
+  effectKind: 11
+  icon: {fileID: 21300000, guid: f656333076b0d4a72b69ca680dbba1e0, type: 3}
+  maxLevel: 1
+  descriptionPerLevel:
+  - 
+  - 
+  - 
+  ballDamagePerLevel: 
+  burn:
+    durationPerLevel: []
+    dpsPerLevel: []
+    maxStacksPerLevel: 
+  freeze:
+    chancePerLevel: []
+    durationPerLevel: []
+    slowPerLevel: []
+    bonusDamagePercentPerLevel: []
+  laser:
+    rowDamagePerLevel: []
+  cluster:
+    chancePerLevel: []
+    specialDamagePerLevel: []
+  mirror:
+    bonusPercentPerLevel: []
+  lastMatch:
+    explosionDamagePerLevel: []
+    radiusPerLevel: []
