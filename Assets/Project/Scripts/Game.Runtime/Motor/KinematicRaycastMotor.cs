@@ -24,6 +24,9 @@ namespace Game.Runtime.Motor
         private readonly HashSet<Collider2D> _passedThrough = new();
         // 이번 Step에서 맞은 적/블록 접촉(콜라이더+노멀, 재사용 버퍼, 할당 없음). Step 시작에 Clear.
         private readonly List<BallHit> _stepHits = new();
+        // CircleCast 결과 재사용 버퍼(NonAlloc 캐스트 — 매 스텝·매 이터레이션 배열 할당 제거). 소형 아레나라 16이면 충분.
+        private readonly RaycastHit2D[] _castBuffer = new RaycastHit2D[16];
+        private ContactFilter2D _castFilter; // Init에서 레이어마스크+트리거 세팅(NonAlloc CircleCast용)
 
         public Vector2 Position => _position;
         public IReadOnlyList<BallHit> LastStepHits => _stepHits;
@@ -40,6 +43,7 @@ namespace Game.Runtime.Motor
             _blockMask = blockMask;
             _passThroughMask = passThroughMask;
             _castMask = wallMask | enemyMask | blockMask;
+            _castFilter = new ContactFilter2D { useTriggers = Physics2D.queriesHitTriggers, useLayerMask = true, layerMask = _castMask, useDepth = false };
             _passedThrough.Clear(); // 볼 재사용 대비(관통 무시셋은 볼 수명 단위)
         }
 
@@ -62,10 +66,10 @@ namespace Game.Runtime.Motor
                 RaycastHit2D? chosen = null;
                 if (_castMask.value != 0)
                 {
-                    RaycastHit2D[] hits = Physics2D.CircleCastAll(_position, _radius, dir, remaining, _castMask);
-                    for (int i = 0; i < hits.Length; i++)
+                    int count = Physics2D.CircleCast(_position, _radius, dir, _castFilter, _castBuffer, remaining);
+                    for (int i = 0; i < count; i++)
                     {
-                        RaycastHit2D h = hits[i];
+                        RaycastHit2D h = _castBuffer[i];
                         if (h.collider == null || _ignoredThisStep.Contains(h.collider) || _passedThrough.Contains(h.collider)) continue;
                         if (arena != null && h.collider == arena) continue;
                         int hb = 1 << h.collider.gameObject.layer;

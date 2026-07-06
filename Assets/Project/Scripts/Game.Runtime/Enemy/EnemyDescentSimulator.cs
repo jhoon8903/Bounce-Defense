@@ -17,6 +17,7 @@ namespace Game.Runtime.Enemy
         private readonly Dictionary<string, int> _handles;
         private readonly Action<string, int> _onBreach; // (id, breachDamage)
         private readonly List<string> _order = new();
+        private readonly Comparison<string> _cmpByRowDesc; // 캐시(인스턴스 메서드그룹→델리게이트 매 틱 할당 방지)
 
         public EnemyDescentSimulator(
             GridController grid,
@@ -30,6 +31,7 @@ namespace Game.Runtime.Enemy
             _views = views;
             _handles = handles;
             _onBreach = onBreach;
+            _cmpByRowDesc = CompareByRowDescending;
         }
 
         // 하강 1틱(입장 완료된 적만). 하단(행 인덱스 큰=화면 아래) 우선 → 아래가 먼저 비우면 위가 같은 틱에 이어 내려감.
@@ -40,7 +42,7 @@ namespace Game.Runtime.Enemy
             foreach (KeyValuePair<string, EnemyModel> kv in _models)
                 if (!kv.Value.IsEntering && !kv.Value.IsBreaching) _order.Add(kv.Key);
             if (_order.Count == 0) return;
-            _order.Sort(CompareByRowDescending);
+            _order.Sort(_cmpByRowDesc);
             float cellSize = _grid.CellSize;
 
             for (int i = 0; i < _order.Count; i++)

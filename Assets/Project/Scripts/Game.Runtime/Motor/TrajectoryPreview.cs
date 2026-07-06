@@ -35,6 +35,8 @@ namespace Game.Runtime.Motor
         private readonly List<Vector2> _uvs = new();
         private readonly List<int> _tris = new();
         private readonly List<Color> _cols = new();
+        private readonly RaycastHit2D[] _castBuffer = new RaycastHit2D[16]; // NonAlloc 캐스트 재사용 버퍼(LateUpdate 매 프레임 배열 할당 제거)
+        private ContactFilter2D _castFilter; // Awake에서 레이어마스크+트리거 세팅
 
         private void Awake()
         {
@@ -55,6 +57,7 @@ namespace Game.Runtime.Motor
             _mr.sortingOrder = sortingOrder;
             _mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _mr.receiveShadows = false;
+            _castFilter = new ContactFilter2D { useTriggers = Physics2D.queriesHitTriggers, useLayerMask = true, layerMask = wallMask.value | enemyMask.value | blockMask.value, useDepth = false };
         }
 
         private void LateUpdate()
@@ -151,9 +154,10 @@ namespace Game.Runtime.Motor
                 bool hasObstacle = false;
                 if (castMask != 0)
                 {
-                    RaycastHit2D[] hits = Physics2D.CircleCastAll(pos, radius, dir, remaining, castMask);
-                    foreach (RaycastHit2D h in hits)
+                    int count = Physics2D.CircleCast(pos, radius, dir, _castFilter, _castBuffer, remaining);
+                    for (int i = 0; i < count; i++)
                     {
+                        RaycastHit2D h = _castBuffer[i];
                         if (h.collider == null) continue;
                         if (arena != null && h.collider == arena) continue;
                         int hb = 1 << h.collider.gameObject.layer;

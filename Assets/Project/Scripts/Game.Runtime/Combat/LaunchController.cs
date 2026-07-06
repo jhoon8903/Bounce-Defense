@@ -7,10 +7,12 @@ namespace Game.Runtime.Combat
     {
         [SerializeField] private Transform launchOrigin;
 
-        [Header("MCP 자동 검증용 (드래그 입력 시뮬레이션 불가 우회)")]
+#if UNITY_EDITOR
+        [Header("MCP 자동 검증용 (드래그 입력 시뮬레이션 불가 우회) — 에디터 전용")]
         [SerializeField] private bool autoLaunchOnPlay;
         [SerializeField] private float autoLaunchDelay = 0.5f;
         [SerializeField] private Vector2 autoLaunchDirection = Vector2.up;
+#endif
 
         private static readonly Vector2 OriginFallback = new(0f, -6.70f);
 
@@ -27,10 +29,14 @@ namespace Game.Runtime.Combat
         private void Start()
         {
             _ballController?.SetCollectTarget(Origin);
+#if UNITY_EDITOR
             if (autoLaunchOnPlay) Invoke(nameof(AutoLaunch), autoLaunchDelay);
+#endif
         }
 
+#if UNITY_EDITOR
         private void AutoLaunch() => BeginFiring(autoLaunchDirection);
+#endif
         
         public void BeginFiring(Vector2 direction)
         {

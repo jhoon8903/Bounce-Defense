@@ -39,6 +39,7 @@ namespace Game.Runtime.Combat
         private readonly Dictionary<string, BallView> _views = new();
         private readonly Dictionary<string, IBallMotor> _motors = new();
         private readonly Dictionary<string, BallSpawnSpec> _specs = new(); // 볼별 타입/데미지/모듈
+        private readonly Stack<KinematicRaycastMotor> _motorPool = new(); // 모터 재사용(스폰마다 new + 내부 컬렉션 할당 방지)
         // 바닥을 맞고 Char로 귀환 중인 볼(모터 스텝 대신 직선 홈잉). 도착 시 소멸.
         private readonly HashSet<string> _collecting = new();
         private readonly List<string> _idCache = new();
@@ -211,8 +212,8 @@ namespace Game.Runtime.Combat
 
             // Ghost 관통 = passThroughMask에 Enemy 레이어(반사 없이 통과·데미지는 기록). 나머지는 0(정상 반사).
             int passThroughMask = spec.PenetratesEnemies ? _enemyMask : 0;
-            IBallMotor motor = new KinematicRaycastMotor();
-            motor.Init(origin, direction, speed, radius, _wallMask, _enemyMask, _blockMask, passThroughMask);
+            KinematicRaycastMotor motor = _motorPool.Count > 0 ? _motorPool.Pop() : new KinematicRaycastMotor();
+            motor.Init(origin, direction, speed, radius, _wallMask, _enemyMask, _blockMask, passThroughMask); // Init이 상태 전체 리셋(재사용 안전)
 
             _models[id] = model;
             _views[id] = view;
@@ -261,6 +262,7 @@ namespace Game.Runtime.Combat
             // unmanaged(분열 특수볼)는 inFlight에 안 세었으므로 감산 제외. 로스터 볼만 감산.
             if (!_unmanaged.Remove(id) && _specs.TryGetValue(id, out BallSpawnSpec spec))
                 _inFlightByType[spec.SourceType] = Mathf.Max(0, InFlightOf(spec.SourceType) - 1);
+            if (_motors.TryGetValue(id, out IBallMotor usedMotor) && usedMotor is KinematicRaycastMotor krm) _motorPool.Push(krm); // 모터 풀 반환(재사용)
             _models.Remove(id);
             _views.Remove(id);
             _motors.Remove(id);

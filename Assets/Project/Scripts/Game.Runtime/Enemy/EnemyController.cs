@@ -38,6 +38,7 @@ namespace Game.Runtime.Enemy
         private float _lastMatchDamage;
         private float _lastMatchRadius;
         private int _explosionDepth;
+        private readonly List<int>[] _explosionHits; // depth별 재사용 버퍼(체인 재귀 안전 + 킬버스트 할당 방지)
 
         public EnemyController(IEnemyFactory factory, IClock clock, GridController grid, CombatEventHub hub, DamageResolver resolver)
         {
@@ -50,6 +51,8 @@ namespace Game.Runtime.Enemy
             _descent = new EnemyDescentSimulator(grid, _models, _views, _handles, OnDescentBreach);
             _breach = new BreachChoreographer(OnBreachImpact);
             _status = new EnemyStatusSimulator(ApplyBurnDamage, SetFreezeSlow, SetEnemyBurning, SetEnemyFrozen);
+            _explosionHits = new List<int>[MaxExplosionDepth];
+            for (int i = 0; i < MaxExplosionDepth; i++) _explosionHits[i] = new List<int>();
         }
 
         protected override void OnInitialize() => _clock.OnFixedTick += OnClockFixedTick;
@@ -147,8 +150,9 @@ namespace Game.Runtime.Enemy
 
             _hub?.RaiseExplosion(center, _lastMatchRadius); // 붉은 폭발 연출(폭발 발생 지점마다 1회 · 체인이면 각 center)
 
-            // 풋프린트를 둘러싼 1칸 링 순회 → 점유 적 핸들 수집(중복 제거)
-            List<int> hits = new();
+            // 풋프린트를 둘러싼 1칸 링 순회 → 점유 적 핸들 수집(중복 제거). depth별 재사용 버퍼(체인 재귀 안전).
+            List<int> hits = _explosionHits[_explosionDepth - 1];
+            hits.Clear();
             int c0 = anchor.Col, r0 = anchor.Row;
             int w = Mathf.Max(1, fp.Width), h = Mathf.Max(1, fp.Height);
             for (int c = c0 - 1; c <= c0 + w; c++)
