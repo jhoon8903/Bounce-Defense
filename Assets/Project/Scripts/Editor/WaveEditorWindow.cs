@@ -17,6 +17,7 @@ namespace Game.EditorTools
         private int _waveIndex;
         private GridConfig _gridConfig;
         private EnemyDefinition _brush;
+        private int _group; // 현재 오써링 중인 서브웨이브 그룹(0=1-1, 1=1-2 …)
         private bool _editInScene = true;
         private Vector2 _paletteScroll;
         private readonly List<EnemyDefinition> _enemyDefs = new();
@@ -58,7 +59,13 @@ namespace Game.EditorTools
 
             EditorGUILayout.Space();
             _editInScene = EditorGUILayout.ToggleLeft("Edit in Scene View", _editInScene);
-            EditorGUILayout.LabelField("배치 수", _wave.PlacementCount.ToString());
+            EditorGUILayout.LabelField("배치 수(전체)", _wave.PlacementCount.ToString());
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("서브웨이브 그룹", EditorStyles.boldLabel);
+            _group = Mathf.Max(0, EditorGUILayout.IntField("현재 그룹 (0=1차, 1=2차 …)", _group));
+            EditorGUILayout.LabelField("이 웨이브 그룹 수", _wave.GroupCount.ToString());
+            EditorGUILayout.HelpBox("현재 그룹만 밝게 표시·편집됩니다. 다른 그룹은 흐리게(순차 스폰이라 같은 상단행에 겹쳐도 OK).", MessageType.None);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Palette (브러시)", EditorStyles.boldLabel);
@@ -115,10 +122,10 @@ namespace Game.EditorTools
             if (!TryMouseCell(e, geo, out CellCoord cell)) { sv.Repaint(); return; }
 
             Footprint fp = _brush != null ? _brush.Footprint : Footprint.Size1x1;
-            int hit = FindPlacementCovering(list, cell);
+            int hit = FindPlacementCovering(list, cell, _group);
             bool inBounds = geo.InBounds(cell.Col, cell.Row) &&
                             geo.InBounds(cell.Col + fp.Width - 1, cell.Row + fp.Height - 1);
-            bool overlaps = Overlaps(list, cell, fp, -1);
+            bool overlaps = Overlaps(list, cell, fp, -1, _group);
 
             // 브러시 프리뷰(브러시 있고 빈 셀 위): 유효=초록, 무효=빨강
             if (_brush != null && hit < 0)
@@ -150,7 +157,7 @@ namespace Game.EditorTools
                 {
                     // 좌클릭 빈 셀 + 유효 → 배치
                     Undo.RecordObject(_wave, "Add Placement");
-                    list.Add(new WaveDefinition.Placement { enemy = _brush, col = cell.Col, row = cell.Row });
+                    list.Add(new WaveDefinition.Placement { enemy = _brush, col = cell.Col, row = cell.Row, group = _group });
                     WritePlacements(list);
                 }
                 e.Use();
@@ -185,9 +192,15 @@ namespace Game.EditorTools
                 WaveDefinition.Placement p = list[i];
                 if (p.enemy == null) continue;
                 Footprint fp = PlacementFootprint(p);
-                DrawFootprint(geo, new CellCoord(p.col, p.row), fp, new Color(0.2f, 0.6f, 1f, 0.30f), new Color(0.4f, 0.8f, 1f, 0.9f));
-                Vector2 center = geo.FootprintWorldCenter(new CellCoord(p.col, p.row), fp);
-                Handles.Label(center, $"{p.enemy.DisplayName}\n#{i}");
+                bool cur = p.group == _group;
+                Color face = cur ? new Color(0.2f, 0.6f, 1f, 0.30f) : new Color(0.5f, 0.5f, 0.5f, 0.12f);
+                Color outline = cur ? new Color(0.4f, 0.8f, 1f, 0.9f) : new Color(0.6f, 0.6f, 0.6f, 0.4f);
+                DrawFootprint(geo, new CellCoord(p.col, p.row), fp, face, outline);
+                if (cur)
+                {
+                    Vector2 center = geo.FootprintWorldCenter(new CellCoord(p.col, p.row), fp);
+                    Handles.Label(center, $"{p.enemy.DisplayName}\n#{i} g{p.group}");
+                }
             }
         }
 
@@ -230,13 +243,13 @@ namespace Game.EditorTools
         private static Footprint PlacementFootprint(WaveDefinition.Placement p) =>
             p.enemy != null ? p.enemy.Footprint : Footprint.Size1x1;
 
-        // cell을 풋프린트가 덮는 배치 인덱스(없으면 -1).
-        private static int FindPlacementCovering(List<WaveDefinition.Placement> list, CellCoord cell)
+        // cell을 풋프린트가 덮는 (현재 그룹) 배치 인덱스(없으면 -1).
+        private static int FindPlacementCovering(List<WaveDefinition.Placement> list, CellCoord cell, int group)
         {
             for (int i = 0; i < list.Count; i++)
             {
                 WaveDefinition.Placement p = list[i];
-                if (p.enemy == null) continue;
+                if (p.enemy == null || p.group != group) continue;
                 Footprint fp = PlacementFootprint(p);
                 if (cell.Col >= p.col && cell.Col < p.col + fp.Width &&
                     cell.Row >= p.row && cell.Row < p.row + fp.Height)
@@ -245,14 +258,14 @@ namespace Game.EditorTools
             return -1;
         }
 
-        // anchor+fp가 기존 배치(ignoreIndex 제외)와 겹치는가.
-        private static bool Overlaps(List<WaveDefinition.Placement> list, CellCoord anchor, Footprint fp, int ignoreIndex)
+        // anchor+fp가 같은 그룹 기존 배치(ignoreIndex 제외)와 겹치는가. 다른 그룹은 순차 스폰이라 겹침 허용.
+        private static bool Overlaps(List<WaveDefinition.Placement> list, CellCoord anchor, Footprint fp, int ignoreIndex, int group)
         {
             for (int i = 0; i < list.Count; i++)
             {
                 if (i == ignoreIndex) continue;
                 WaveDefinition.Placement p = list[i];
-                if (p.enemy == null) continue;
+                if (p.enemy == null || p.group != group) continue;
                 Footprint ofp = PlacementFootprint(p);
                 bool sepX = anchor.Col + fp.Width <= p.col || p.col + ofp.Width <= anchor.Col;
                 bool sepY = anchor.Row + fp.Height <= p.row || p.row + ofp.Height <= anchor.Row;

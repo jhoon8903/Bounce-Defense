@@ -16,6 +16,7 @@ namespace Game.Runtime.Stage
             public EnemyDefinition enemy;
             public int col;
             public int row;
+            public int group; // 서브웨이브 그룹(0=1-1, 1=1-2 …). 같은 웨이브 내 상단행이 비면 순차 스폰되는 단위.
         }
 
         [SerializeField] private Placement[] placements;
@@ -40,6 +41,28 @@ namespace Game.Runtime.Stage
             if (placements == null) return;
             for (int i = 0; i < placements.Length; i++)
                 if (placements[i].enemy != null) buffer.Add(placements[i]);
+        }
+
+        // 서브웨이브 그룹 수(최대 group 인덱스+1). group 미지정(전부 0)이면 1 = 기존 단일 스폰과 동일.
+        public int GroupCount
+        {
+            get
+            {
+                int max = -1;
+                if (placements != null)
+                    for (int i = 0; i < placements.Length; i++)
+                        if (placements[i].enemy != null && placements[i].group > max) max = placements[i].group;
+                return max + 1;
+            }
+        }
+
+        // 지정 그룹의 유효 배치만 버퍼에 채운다(StageController가 그룹별 순차 스폰에 사용).
+        public void BuildGroup(int group, List<Placement> buffer)
+        {
+            buffer.Clear();
+            if (placements == null) return;
+            for (int i = 0; i < placements.Length; i++)
+                if (placements[i].enemy != null && placements[i].group == group) buffer.Add(placements[i]);
         }
 
 #if UNITY_EDITOR

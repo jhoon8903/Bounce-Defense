@@ -16,45 +16,120 @@ MonoBehaviour:
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 0
     row: 2
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 2
     row: 2
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 4
     row: 2
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 6
     row: 2
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 7
     row: 3
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 5
     row: 3
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 3
     row: 3
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 1
     row: 3
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 0
     row: 4
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 2
     row: 4
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 4
     row: 4
+    group: 0
   - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
     col: 6
     row: 4
+    group: 0
   - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
     col: 2
     row: 0
+    group: 0
   - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
     col: 6
     row: 0
+    group: 0
   - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
     col: 4
     row: 0
+    group: 0
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 0
+    row: 2
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 2
+    row: 2
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 4
+    row: 2
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 6
+    row: 2
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 7
+    row: 3
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 5
+    row: 3
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 3
+    row: 3
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 1
+    row: 3
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 0
+    row: 4
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 2
+    row: 4
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 4
+    row: 4
+    group: 1
+  - enemy: {fileID: 11400000, guid: 192f0d0222c4b43c7a039b217168496d, type: 2}
+    col: 6
+    row: 4
+    group: 1
+  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
+    col: 2
+    row: 0
+    group: 1
+  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
+    col: 6
+    row: 0
+    group: 1
+  - enemy: {fileID: 11400000, guid: 0f32ebc53027f43aaaf1540a721dab73, type: 2}
+    col: 4
+    row: 0
+    group: 1

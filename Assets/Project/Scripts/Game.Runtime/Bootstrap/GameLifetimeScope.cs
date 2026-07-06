@@ -109,7 +109,7 @@ namespace Game.Runtime.Bootstrap
             builder.Register(resolver =>
             {
                 StageDefinition s = resolver.Resolve<StageDefinition>();
-                return new LevelModel(s.XpPerKill, s.BaseXpToLevel, s.XpGrowthPerLevel);
+                return new LevelModel(s.XpPerKill, s.BaseXpToLevel, s.XpGrowthPerLevel, s.MaxLevel);
             }, Lifetime.Singleton);
             builder.Register<CardDrawService>(Lifetime.Singleton);
 
@@ -155,7 +155,18 @@ namespace Game.Runtime.Bootstrap
                 container.Resolve<EnemyController>().Initialize();
 
                 // 스테이지 컨트롤러는 적 컨트롤러 준비 후 초기화(초기화 시 웨이브 스폰이 시작된다).
-                container.Resolve<StageController>().Initialize();
+                StageController stageController = container.Resolve<StageController>();
+                stageController.Initialize();
+
+                // 결과 UI(스펙 §5): HP 바(BaseModel 구독) + 승/패 결과 팝업(StateChanged 구독). 씬에 있으면 배선.
+                HpBarView hpBar = UnityEngine.Object.FindFirstObjectByType<HpBarView>();
+                if (hpBar) hpBar.Bind(stageController.Base);
+                ResultPopupView resultView = UnityEngine.Object.FindFirstObjectByType<ResultPopupView>();
+                if (resultView) container.Inject(resultView);
+
+                // 조준 입력이 일시정지(드래프트/결과)를 알도록 IClock 주입 — 카드 클릭이 조준으로 새는 버그 방지.
+                AimController aim = UnityEngine.Object.FindFirstObjectByType<AimController>();
+                if (aim) container.Inject(aim);
 
                 // 카드 드래프트: 킬→XP 구독 + 뷰 바인드. 뷰/DB가 씬에 배선된 경우에만 활성.
                 if (draftReady) container.Resolve<CardDraftController>().Initialize();

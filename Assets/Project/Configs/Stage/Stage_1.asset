@@ -28,5 +28,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: be4737c8191e34c88a8b674dc4cb86f7, type: 2}
   - {fileID: 11400000, guid: 855cda6542fd94214bffad2045694290, type: 2}
   xpPerKill: 1
-  baseXpToLevel: 3
-  xpGrowthPerLevel: 4
+  baseXpToLevel: 10
+  xpGrowthPerLevel: 1
+  hpGrowthPerWave: 0.4

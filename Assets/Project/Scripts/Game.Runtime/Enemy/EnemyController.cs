@@ -65,7 +65,7 @@ namespace Game.Runtime.Enemy
         // ---- 스폰 ----
         // 지정 셀 앵커에 배치(손배치 웨이브). cascadeIndex = 등장 순서(낙하 지연 계산). 자리 없으면 null.
         // 스폰 즉시 셀은 그리드에 예약되지만, 몹은 등장 연출이 끝날 때까지 무적(콜라이더 off).
-        public EnemyModel Spawn(EnemyDefinition definition, CellCoord anchor, int cascadeIndex)
+        public EnemyModel Spawn(EnemyDefinition definition, CellCoord anchor, int cascadeIndex, float hpScale = 1f)
         {
             if (definition == null || _grid == null || !_grid.IsReady) return null;
             Footprint fp = definition.Footprint;
@@ -73,7 +73,7 @@ namespace Game.Runtime.Enemy
 
             Vector2 center = _grid.Model.FootprintWorldCenter(anchor, fp);
             string id = _factory.GenerateId();
-            (EnemyModel model, EnemyView view) = _factory.Create(id, definition, center);
+            (EnemyModel model, EnemyView view) = _factory.Create(id, definition, center, hpScale);
             if (model == null || view == null) return null;
 
             // occupant=view 로 배치(볼 콜라이더가 같은 IDamageable를 가리킴).
@@ -95,6 +95,13 @@ namespace Game.Runtime.Enemy
             // 등장 연출 시작: 낙하 캐스케이드(순서별 지연) → 음영 → 낙하 → 덜컹 → 활성.
             _entrance.Begin(id, model, view, cascadeIndex, center, placement.WorldSize);
             return model;
+        }
+
+        // 스테이지가 서브그룹 스폰 게이트로 사용: 이 앵커에 지금 배치 가능한가(상단행이 비었는가).
+        public bool CanSpawnAt(EnemyDefinition definition, CellCoord anchor)
+        {
+            if (definition == null || _grid == null || !_grid.IsReady) return false;
+            return _grid.Model.CanPlace(anchor, definition.Footprint);
         }
 
         // Last Match 파라미터 주입(SkillRuntime). damage 또는 radius가 0이면 미보유(폭발 비활성).

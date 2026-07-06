@@ -19,15 +19,18 @@ namespace Game.Runtime.Stage
         private readonly StageDefinition _stage;
         private readonly BaseModel _base = new();
 
-        private readonly List<WaveDefinition.Placement> _placements = new();
+        private readonly List<WaveDefinition.Placement> _groupBuf = new(); // 그룹 빌드 임시 버퍼
+        private readonly List<WaveDefinition.Placement> _pending = new();  // 아직 스폰 안 된 배치(그룹 순). 빈 셀마다 롤링 스폰.
+        private WaveDefinition _wave;   // 현재 웨이브
         private int _resolvedThisWave;  // 이번 웨이브 해소된 적(킬+침범) 수
-        private int _plannedThisWave;   // 이번 웨이브 실제 스폰 수(배치 성공분)
+        private int _plannedThisWave;   // 이번 웨이브 실제 스폰 수(누적)
         private int _waveIndex;
         private int _totalKills;
         private StageState _state = StageState.Idle;
 
         public BaseModel Base => _base;
         public StageState State => _state;
+        public event System.Action<StageState> StateChanged; // 승/패 전이 시 결과 팝업이 구독
         public int WaveNumber => _waveIndex + 1;    // 1-based(HUD)
         public int WaveCount => _stage != null ? _stage.WaveCount : 0;
         public int TotalKills => _totalKills;
@@ -68,35 +71,56 @@ namespace Game.Runtime.Stage
             _base.Initialize(_stage != null ? _stage.BaseHp : 300);
             _waveIndex = 0;
             _totalKills = 0;
-            _state = _stage != null && _stage.WaveCount > 0 ? StageState.Playing : StageState.Won;
+            SetState(_stage != null && _stage.WaveCount > 0 ? StageState.Playing : StageState.Won);
             if (_state == StageState.Playing) BeginWave(0);
         }
 
-        // 웨이브 = 손배치 배치도. 시작 시 전부 한 번에 스폰(등장 캐스케이드가 시각적 페이싱 담당).
+        // 웨이브 = 서브그룹(1-1,1-2…) 배치도. 전체 배치를 group 순으로 대기열에 쌓고, 빈 셀마다 롤링 스폰한다.
+        //  → group0은 시작 시 전부(빈 격자) 스폰, group1~은 각 셀이 비는 즉시(하강/처치) 채워져 연속 스트림.
         private void BeginWave(int index)
         {
-            WaveDefinition wave = _stage.GetWave(index);
-            _placements.Clear();
-            wave?.BuildPlacements(_placements);
+            _wave = _stage.GetWave(index);
+            _pending.Clear();
             _resolvedThisWave = 0;
-
-            int spawned = 0;
-            for (int i = 0; i < _placements.Count; i++)
+            _plannedThisWave = 0;
+            if (_wave != null)
             {
-                WaveDefinition.Placement p = _placements[i];
-                CellCoord anchor = new CellCoord(p.col, p.row);
-                if (_enemies.Spawn(p.enemy, anchor, spawned) != null) spawned++; // cascadeIndex = 성공 순서
+                int groups = _wave.GroupCount;
+                for (int g = 0; g < groups; g++) { _wave.BuildGroup(g, _groupBuf); _pending.AddRange(_groupBuf); } // group 순 대기열
             }
-            _plannedThisWave = spawned;
-            if (_plannedThisWave == 0) AdvanceWave(); // 빈 웨이브면 즉시 진행
+            if (_pending.Count == 0) { AdvanceWave(); return; } // 빈 웨이브면 즉시 진행
+            TrySpawnPending(); // 시작 스폰(빈 격자라 group0 전량 즉시)
+        }
+
+        // 대기열을 훑어 '지금 배치 가능한(셀이 빈)' 배치만 스폰. group 순 대기라 같은 셀은 앞 그룹이 먼저,
+        // 그 적이 하강/처치로 셀을 비우면 뒤 그룹이 채운다 → "비는 데로" 연속 스폰.
+        private void TrySpawnPending()
+        {
+            if (_pending.Count == 0) return;
+            float hpScale = _stage != null ? _stage.WaveHpScale(_waveIndex) : 1f; // 웨이브 진행할수록 적 HP↑
+            int w = 0;
+            for (int i = 0; i < _pending.Count; i++)
+            {
+                WaveDefinition.Placement p = _pending[i];
+                if (_enemies.CanSpawnAt(p.enemy, new CellCoord(p.col, p.row))
+                    && _enemies.Spawn(p.enemy, new CellCoord(p.col, p.row), _plannedThisWave, hpScale) != null)
+                {
+                    _plannedThisWave++; // 스폰 성공 → 대기열에서 제외
+                    continue;
+                }
+                _pending[w++] = _pending[i]; // 아직 못 스폰 → 유지(앞으로 압축)
+            }
+            _pending.RemoveRange(w, _pending.Count - w);
         }
 
         protected override void OnFixedTick(float fixedDeltaTime)
         {
             if (_state != StageState.Playing) return;
 
-            // 웨이브 전멸 = 스폰된 전부 해소(킬/침범).
-            if (_plannedThisWave > 0 && _resolvedThisWave >= _plannedThisWave)
+            TrySpawnPending(); // 빈 셀마다 롤링 스폰(연속 스트림)
+
+            // 웨이브 클리어 = 대기열 소진 + 스폰된 전부 해소(킬/침범).
+            if (_pending.Count == 0 && _plannedThisWave > 0 && _resolvedThisWave >= _plannedThisWave)
                 AdvanceWave();
         }
 
@@ -105,12 +129,20 @@ namespace Game.Runtime.Stage
             if (_state != StageState.Playing) return;
             if (_waveIndex + 1 >= _stage.WaveCount)
             {
-                _state = StageState.Won; // 마지막 웨이브 클리어 → 성공
+                SetState(StageState.Won); // 마지막 웨이브 클리어 → 성공
                 return;
             }
             _waveIndex++;
             // Phase 3 훅: 여기서 스폰 일시정지 + 3택 카드 드래프트(XP 레벨업과 조율). 지금은 바로 다음 웨이브.
             BeginWave(_waveIndex);
+        }
+
+        // 상태 전이 단일 지점 — 변경 시에만 이벤트 발화(결과 팝업 트리거).
+        private void SetState(StageState next)
+        {
+            if (_state == next) return;
+            _state = next;
+            StateChanged?.Invoke(next);
         }
 
         private void OnKill()
@@ -125,7 +157,7 @@ namespace Game.Runtime.Stage
             if (_state != StageState.Playing) return;
             _resolvedThisWave++;                 // 침범도 웨이브 해소로 집계
             _base.TakeDamage(breachDamage);
-            if (_base.IsDead) _state = StageState.Lost; // 베이스 0 → 실패
+            if (_base.IsDead) SetState(StageState.Lost); // 베이스 0 → 실패
         }
     }
 }

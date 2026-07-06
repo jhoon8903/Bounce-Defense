@@ -548,10 +548,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b138c62d975c844d39a340f42394349e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.UI.SkillLoadoutView
-  activeText: {fileID: 4723488463477781989}
-  passiveText: {fileID: 4024149271976956514}
-  activeSlotRoot: {fileID: 4523007785676831037}
-  passiveSlotRoot: {fileID: 1680954527548208630}
+  activeSlots: []
+  passiveSlots: []
 --- !u!1 &1154508897834524362
 GameObject:
   m_ObjectHideFlags: 0
@@ -748,6 +746,7 @@ GameObject:
   - component: {fileID: 411644661858853724}
   - component: {fileID: 6218979206978130299}
   - component: {fileID: 1719735810961435071}
+  - component: {fileID: 8142324184093318988}
   m_Layer: 5
   m_Name: PassiveCard
   m_TagString: Untagged
@@ -885,7 +884,21 @@ MonoBehaviour:
   - {fileID: 6379443701313688150}
   - {fileID: 368550143720256947}
   - {fileID: 6924177050021044764}
-  selectButton: {fileID: 6218979206978130299}
+  selectButton: {fileID: 8142324184093318988}
+--- !u!114 &8142324184093318988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1665633073409247122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5b897ac143c141b0bd94bfd2d3c5a91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.UI.EventBtn
+  interactable: 1
+  throttleTime: 0.5
 --- !u!1 &1707910302041179669
 GameObject:
   m_ObjectHideFlags: 0
@@ -6097,6 +6110,7 @@ GameObject:
   - component: {fileID: 371910703469640604}
   - component: {fileID: 3403251877682473718}
   - component: {fileID: 9061622478854764637}
+  - component: {fileID: 7455731143857505773}
   m_Layer: 5
   m_Name: ActiveCard
   m_TagString: Untagged
@@ -6234,7 +6248,21 @@ MonoBehaviour:
   - {fileID: 5430697218613458096}
   - {fileID: 4053363101336201667}
   - {fileID: 6160016922564907170}
-  selectButton: {fileID: 3403251877682473718}
+  selectButton: {fileID: 7455731143857505773}
+--- !u!114 &7455731143857505773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7605237293728936516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5b897ac143c141b0bd94bfd2d3c5a91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Runtime.UI.EventBtn
+  interactable: 1
+  throttleTime: 0.5
 --- !u!1 &7742936705387851417
 GameObject:
   m_ObjectHideFlags: 0

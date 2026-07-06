@@ -28,11 +28,12 @@ namespace Game.Runtime.Enemy
         public bool IsEntering => _phase == SpawnPhase.Entering;
         public float LandedY { get; private set; }
 
-        public void Initialize(string id, EnemyDefinition definition, Vector2 position)
+        public void Initialize(string id, EnemyDefinition definition, Vector2 position, float hpScale = 1f)
         {
             Id = id;
             Definition = definition;
-            MaxHp = definition != null ? definition.BaseHp : 1;
+            int rawHp = definition != null ? definition.BaseHp : 1;
+            MaxHp = Mathf.Max(1, Mathf.RoundToInt(rawHp * (hpScale > 0f ? hpScale : 1f)));
             Hp = MaxHp;
             Position = position;
             IsDead = false;

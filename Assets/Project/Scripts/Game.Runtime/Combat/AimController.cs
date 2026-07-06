@@ -1,5 +1,8 @@
+using Game.Core.Clock;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using VContainer;
 
 namespace Game.Runtime.Combat
 {
@@ -13,6 +16,10 @@ namespace Game.Runtime.Combat
         [SerializeField] private Camera worldCamera;
 
         private bool _firingStarted;
+        private IClock _clock;
+
+        [Inject]
+        public void Construct(IClock clock) => _clock = clock;
 
         private void Awake()
         {
@@ -25,6 +32,8 @@ namespace Game.Runtime.Combat
             Pointer pointer = Pointer.current;
             if (pointer == null || launchController == null) return;
             if (!pointer.press.isPressed) return;
+            // 일시정지(드래프트/결과 팝업, GameSpeed 0) 또는 UI 위 터치(카드 클릭 등)는 조준/발사 아님.
+            if ((_clock != null && _clock.GameSpeed <= 0f) || IsPointerOverUI()) return;
 
             Vector2 dir = ComputeClampedDirection(pointer.position.ReadValue(), launchController.Origin);
             if (!_firingStarted)
@@ -36,6 +45,12 @@ namespace Game.Runtime.Combat
             {
                 launchController.SetAimDirection(dir);
             }
+        }
+
+        private static bool IsPointerOverUI()
+        {
+            EventSystem es = EventSystem.current;
+            return es != null && es.IsPointerOverGameObject();
         }
 
         private Vector2 ComputeClampedDirection(Vector2 screenPos, Vector2 origin)

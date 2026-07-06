@@ -17,13 +17,13 @@ namespace Game.Runtime.Enemy
             _resolver = resolver;
         }
 
-        public (EnemyModel model, EnemyView view) Create(string id, EnemyDefinition definition, Vector2 position)
+        public (EnemyModel model, EnemyView view) Create(string id, EnemyDefinition definition, Vector2 position, float hpScale = 1f)
         {
             EnemyView view = _pool.Get<EnemyView>();
             if (view == null) return (null, null);
             _resolver.Inject(view);
             EnemyModel model = new EnemyModel();
-            model.Initialize(id, definition, position);
+            model.Initialize(id, definition, position, hpScale);
             view.Model = model;
             return (model, view);
         }
