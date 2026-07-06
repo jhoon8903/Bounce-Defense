@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 namespace Game.Runtime.Combat
 {
     // 조준 입력 전담: 포인터 → 조준 방향(각도 클램프) → LaunchController에 위임(발사 시작/조준/정지).
-    // 캐릭터 비주얼(플립·앵커 회전)과 궤적은 각각 CharView·TrajectoryPreview가 LaunchController.CurrentDirection을 읽어 처리.
+    // 캐릭터 비주얼(플립·앵커 회전)은 CharController(IClock 틱), 궤적은 TrajectoryPreview가 LaunchController.CurrentDirection을 읽어 처리.
     public sealed class AimController : MonoBehaviour
     {
         [SerializeField] private LaunchController launchController;

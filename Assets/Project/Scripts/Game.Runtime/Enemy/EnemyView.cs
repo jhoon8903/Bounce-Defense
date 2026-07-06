@@ -27,6 +27,7 @@ namespace Game.Runtime.Enemy
         private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
         private static readonly Color FlashWhite = Color.white;
         private Vector3 _mobBaseScale = Vector3.one; // 스쿼시 기준(프리팹 몹 스케일이 1이 아닐 수 있어 캡처)
+        private Vector3 _mobBasePos;                 // 움찔 반동 기준(몹 로컬 위치 — 킥 후 여기로 복귀)
         private bool _mobBaseCaptured;
         private CanvasGroup _hpCanvasGroup;
         private RectTransform _hpBarRect;            // HP 바(월드 캔버스) RectTransform — 풋프린트 높이별 위치 보정
@@ -64,6 +65,7 @@ namespace Game.Runtime.Enemy
             if (!_mobBaseCaptured && mobRenderer != null)
             {
                 _mobBaseScale = mobRenderer.transform.localScale;
+                _mobBasePos = mobRenderer.transform.localPosition;
                 _mobBaseCaptured = true;
             }
             if (blockRenderer != null)
@@ -138,6 +140,14 @@ namespace Game.Runtime.Enemy
             mobRenderer.transform.localScale = Vector3.Scale(_mobBaseScale, new Vector3(1f + amount * 0.5f, 1f - amount, 1f));
         }
 
+        // 피격 움찔 반동(§4): 위 몹만 순간 밀었다 원복(HitFeedbackController가 매 틱 감쇠 오프셋으로 호출).
+        // 몹 로컬 위치만 오프셋 → 콜라이더·돌 블록·모델(격자 하강 위치)은 불변이라 경로 이탈/경직 없음.
+        public void SetRecoil(Vector2 localOffset)
+        {
+            if (mobRenderer == null || !_mobBaseCaptured) return;
+            mobRenderer.transform.localPosition = _mobBasePos + (Vector3)localOffset;
+        }
+
         private void EnsureShadow()
         {
             if (shadowRenderer != null) return;
@@ -184,11 +194,9 @@ namespace Game.Runtime.Enemy
         public void ApplyDamage(int amount) => _damageSink?.Invoke(this, amount);
 
         // IStatusReceiver: 볼 모듈(Fire/Ice) → 여기. 상태이상 부여는 컨트롤러(EnemyStatusSimulator)로 포워드.
-        public void ApplyBurn(float durationSeconds, float damagePerSecond, int maxStacks) =>
-            _burnSink?.Invoke(this, durationSeconds, damagePerSecond, maxStacks);
+        public void ApplyBurn(float durationSeconds, float damagePerSecond, int maxStacks) => _burnSink?.Invoke(this, durationSeconds, damagePerSecond, maxStacks);
 
-        public void ApplyFreeze(float durationSeconds, float slow) =>
-            _freezeSink?.Invoke(this, durationSeconds, slow);
+        public void ApplyFreeze(float durationSeconds, float slow) => _freezeSink?.Invoke(this, durationSeconds, slow);
 
         // 히트 플래시량(0=원색, 1=완전 흰색). HitFeedbackController가 매 틱 감쇠시키며 호출. 블록+몹 함께(음영 제외).
         public void SetHitFlash(float amount)
@@ -210,6 +218,7 @@ namespace Game.Runtime.Enemy
             HideVisuals();
             if (shadowRenderer != null) shadowRenderer.enabled = false;
             SetSquash(0f); // 몹 스쿼시 복구
+            SetRecoil(Vector2.zero); // 몹 움찔 오프셋 원복(풀 재사용 대비)
             transform.localScale = Vector3.one;
             transform.rotation = Quaternion.identity;
         }

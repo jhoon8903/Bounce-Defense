@@ -27,6 +27,7 @@ namespace Game.Runtime.Bootstrap
 
         [Header("Scene Refs (RegisterComponent로 주입)")]
         [SerializeField] private LaunchController launchController;
+        [SerializeField] private CharView charView; // Char 비주얼(조준/반동) — CharController가 IClock 틱으로 구동
 
         [Header("Grid")]
         [SerializeField] private GridConfig gridConfig;
@@ -59,7 +60,8 @@ namespace Game.Runtime.Bootstrap
                 {
                     if (ballConfigs[i] == null) continue;
                     if (normalConfig == null) normalConfig = ballConfigs[i];
-                    if (ballConfigs[i].SourceType == BallSourceType.Normal) { normalConfig = ballConfigs[i]; break; }
+                    if (ballConfigs[i].SourceType != BallSourceType.Normal) continue;
+                    normalConfig = ballConfigs[i]; break;
                 }
             }
             builder.RegisterInstance(normalConfig != null ? normalConfig : ScriptableObject.CreateInstance<BallConfig>());
@@ -72,6 +74,15 @@ namespace Game.Runtime.Bootstrap
             if (gridDebugView) builder.RegisterComponent(gridDebugView);
 
             if (launchController) builder.RegisterComponent(launchController);
+
+            // Char 비주얼 구동(IClock 틱): 조준 스무딩 + 발사 반동 까딱. 뷰/발사대 미배선 시 스킵(코어 루프 무관).
+            if (charView == null) charView = FindFirstObjectByType<CharView>(); // 인스펙터 미할당 폴백(StageHudView 패턴)
+            bool charReady = charView != null && launchController != null;
+            if (charReady)
+            {
+                builder.RegisterComponent(charView);
+                builder.Register<CharController>(Lifetime.Singleton);
+            }
 
             // Enemy MVC: Ball 스택과 동일 방식(Factory+Controller 싱글톤). per-type 데이터는 EnemyDefinition SO(런타임 주입).
             // 적 = Block 타일(콜라이더 몸체)+위 Mob 비주얼, 단일 EnemyView 풀. GridController에 배치 위임.
@@ -118,11 +129,14 @@ namespace Game.Runtime.Bootstrap
                 // 피격 피드백(데미지 숫자 + 화이트 플래시): OnHit + OnTick 구독. 풀 활성화 후.
                 container.Resolve<HitFeedbackController>().Initialize();
 
+                // Char 비주얼 구동: OnTick 구독(조준 스무딩 + 발사 반동). 뷰/발사대 배선된 경우에만.
+                if (charReady) container.Resolve<CharController>().Initialize();
+
                 // Grid: 원점(씬 Grid 앵커)을 Initialize 전에 주입 — BallController.SetCollectTarget 패턴과 동일.
                 GridController grid = container.Resolve<GridController>();
                 Vector2 gridOrigin = gridAnchor
-                    ? (Vector2)gridAnchor.position
-                    : (gridConfig != null ? gridConfig.OriginFallback : new Vector2(0f, 1.27f));
+                    ? gridAnchor.position
+                    : gridConfig != null ? gridConfig.OriginFallback : new Vector2(0f, 1.27f);
                 grid.SetOrigin(gridOrigin);
                 grid.Initialize();
 

@@ -89,7 +89,7 @@ namespace Game.Runtime.Combat
                 Vector2 pos = occ is EnemyView ev && ev.Model != null ? ev.Model.Position : Vector2.zero;
                 HitContext ctx = HitContext.Secondary(occ, source, DamageKind.LaserRow, flatDamage);
                 _resolver.Resolve(ctx); // 무크리·무버프 flat, 동일 리졸버 → 사망 시 RaiseKill(Last Match 등 이어짐, §255)
-                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit);
+                if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero); // 행뎀=방향 없음(반동 없음)
             }
         }
 
@@ -175,8 +175,15 @@ namespace Game.Runtime.Combat
 
         private void OnClockFixedTick() => FixedTick(_clock.GameDeltaTime);
 
-        public BallModel Spawn(Vector2 origin, Vector2 direction, BallSpawnSpec spec) =>
-            SpawnInternal(origin, direction, spec, managed: true);
+        // 발사 카운터(단조 증가, 로스터 볼만). Char 뷰가 매 프레임 폴링해 증가분을 반동 킥으로 소비(총 쏘듯 까딱, §8).
+        // 분열 특수볼(SpawnClusterBall)은 '발사'가 아니므로 미집계.
+        public int ShotsFired { get; private set; }
+
+        public BallModel Spawn(Vector2 origin, Vector2 direction, BallSpawnSpec spec)
+        {
+            ShotsFired++;
+            return SpawnInternal(origin, direction, spec, managed: true);
+        }
 
         // Cluster 분열(services.SpawnClusterBall): 히트 위치서 무작위 상향 특수볼 1개.
         //  - 2차뎀(무크리)·무모듈(무재귀 §183)·Cluster 타입(Warm Tin 대상 아님)·로스터 미집계(unmanaged).
@@ -239,7 +246,7 @@ namespace Game.Runtime.Combat
                 if (spec.DamageKind == DamageKind.Direct && _mirrorArmed.Remove(id))
                     ctx.BonusAdditivePercent = _mirrorPercent;
                 _resolver.Resolve(ctx);
-                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit);
+                if (target is EnemyView ev) _hub?.RaiseHit(ev, pos, ctx.FinalDamage, ctx.IsCrit, hits[i].Normal); // 직격 법선 → 움찔 반동
                 spec.Module?.OnEnemyHit(target, ctx, this); // services = 이 컨트롤러(IBallEffectContext 파사드)
             }
         }

@@ -1,34 +1,30 @@
-using Game.Runtime.Combat;
 using Project.Scripts.Game.Objects.Char;
 using UnityEngine;
 
-// 캐릭터(사신) 비주얼 오케스트레이터. LaunchController.CurrentDirection(단일 조준 방향)을 읽어:
-//  - 조준이 1사분면(오른쪽, dir.x>0)이면 Char를 localScale.x=-1로 플립, 아니면 +1(기본).
-//  - 앵커(스태프)를 같은 조준 방향으로 구동(AnchorView.AimTo, 플립 반영).
+// Char 루트 뷰 = dumb 렌더러. 스스로 시간을 돌리지 않는다(자체 LateUpdate 제거).
+// CharController(IClock 틱)가 조준 방향을 읽어 SetFacing으로 좌우 뒤집기를 밀어넣고, 스태프 각은 Anchor로 구동한다.
 public class CharView : MonoBehaviour
 {
-    [SerializeField] private LaunchController launchController;
     [SerializeField] private AnchorView anchorView;
     [Tooltip("기본(왼쪽/2사분면) facing에서의 |localScale.x|.")]
     [SerializeField] private float baseScaleX = 1f;
 
-    private void Awake()
+    // 스태프 피벗(컨트롤러가 각도 구동). 미배선 시 자식에서 탐색(빌드 콜백 조회 타이밍 안전).
+    public AnchorView Anchor
     {
-        if (!launchController) launchController = FindObjectOfType<LaunchController>();
-        if (!anchorView) anchorView = GetComponentInChildren<AnchorView>();
+        get
+        {
+            if (!anchorView) anchorView = GetComponentInChildren<AnchorView>();
+            return anchorView;
+        }
     }
 
-    private void LateUpdate()
+    // 조준 방향 부호로 좌우 뒤집기. 즉시값(비시간) — 컨트롤러가 매 틱 호출.
+    public void SetFacing(bool faceRight)
     {
-        if (launchController == null) return;
-        Vector2 dir = launchController.CurrentDirection;
-        bool faceRight = dir.x > 0f; // 1사분면(오른쪽)
-
         float mag = Mathf.Abs(baseScaleX) < 1e-4f ? 1f : Mathf.Abs(baseScaleX);
         Vector3 s = transform.localScale;
         s.x = mag * (faceRight ? -1f : 1f);
         transform.localScale = s;
-
-        if (anchorView != null) anchorView.AimTo(dir, faceRight);
     }
 }

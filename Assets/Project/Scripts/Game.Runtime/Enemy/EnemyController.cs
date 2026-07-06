@@ -144,7 +144,7 @@ namespace Game.Runtime.Enemy
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);
                 _resolver.Resolve(ctx); // 사망 시 HandleDamage→RaiseKill→TryLastMatchExplosion 재귀(depth 가드)
-                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false); // 폭발 = 흰색
+                if (ctx.FinalDamage > 0) _hub?.RaiseHit(v, pos, ctx.FinalDamage, false, Vector2.zero); // 폭발 = 흰색·무방향(반동 없음)
             }
 
             _explosionDepth--;
@@ -182,7 +182,7 @@ namespace Game.Runtime.Enemy
             Vector2 pos = view.Model.Position;                 // Resolve 전 캡처(살상 번틱 디스폰 대비)
             HitContext ctx = HitContext.Secondary(view, BallSourceType.Fire, DamageKind.Burn, dps);
             _resolver.Resolve(ctx);
-            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit); // 번 = 항상 흰색
+            if (ctx.FinalDamage > 0) _hub?.RaiseHit(view, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero); // 번 = 흰색·무방향(반동 없음)
         }
 
         // ---- IClock 틱: 등장 연출(입장 중) → 연속 하강(입장 완료) ----
