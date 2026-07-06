@@ -13,13 +13,13 @@ namespace Game.Runtime.Enemy
         [SerializeField] private SpriteRenderer blockRenderer; // 돌 타일(콜라이더 몸체와 정렬)
         [SerializeField] private SpriteRenderer mobRenderer;   // 위에 올라가는 몬스터(순수 비주얼)
         [SerializeField] private BoxCollider2D boxCollider;
-        [SerializeField] private Canvas hpCanvas;// 볼 CircleCast 대상(Enemy 레이어)
-        [SerializeField] private Image hpSliderFill;              // 몸체 HP 숫자(선택 — 미배선 시 스킵)
+        [SerializeField] private Transform hpBarRoot;   // HP바 앵커(구 HpBarCanvas — Canvas 제거, 순수 Transform). 풋프린트 높이별 위치 보정.
+        [SerializeField] private SpriteRenderer hpBg;   // HP바 배경(SpriteRenderer = 스프라이트 배치, 적별 월드캔버스 제거)
+        [SerializeField] private SpriteRenderer hpFill; // HP바 채움 — 좌측 고정 스케일로 HP% 표현(Image.fillAmount 대체)
         [SerializeField] private SpriteRenderer shadowRenderer; // 착지 텔레그래프 음영(미배선 시 런타임 자동생성)
         [SerializeField] private ParticleSystem burnFx; // 번 불꽃 루프(적-부착, 몹 위). SetBurning으로 on/off. 미배선 시 스킵.
         [SerializeField] private ParticleSystem freezeFx; // 냉동 서리/눈 루프(적-부착, 몹 위). SetFrozen으로 on/off. 미배선 시 스킵.
 
-        private static Camera s_mainCamera; // Camera.main 캐시(스폰마다 FindGameObjectsWithTag 스캔 방지). 씬 리로드 시 == null(파괴됨)로 자동 재취득.
         private System.Action<EnemyView, int> _damageSink;
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
         private System.Action<EnemyView, float, float> _freezeSink;    // (view, duration, slow)
@@ -39,9 +39,10 @@ namespace Game.Runtime.Enemy
         private Vector3 _mobBaseScale = Vector3.one; // 스쿼시 기준(프리팹 몹 스케일이 1이 아닐 수 있어 캡처)
         private Vector3 _mobBasePos;                 // 움찔 반동 기준(몹 로컬 위치 — 킥 후 여기로 복귀)
         private bool _mobBaseCaptured;
-        private CanvasGroup _hpCanvasGroup;
-        private RectTransform _hpBarRect;            // HP 바(월드 캔버스) RectTransform — 풋프린트 높이별 위치 보정
-        private Vector2 _hpBarBaseAnchored;          // 프리팹 기준 위치(1칸 높이 기준). 2칸 이상이면 그만큼 아래로.
+        private Vector3 _hpBarBaseLocalPos;  // HP바 앵커 프리팹 기준 로컬 위치(풋프린트 높이 보정 기준)
+        private Vector3 _hpFillBaseScale;    // 채움 프리팹 기준 스케일
+        private Vector3 _hpFillBaseLocalPos; // 채움 프리팹 기준 로컬 위치(좌측 앵커 기준)
+        private float _hpFillWidth;          // 채움 로컬 폭(스케일 채움 시 좌측 고정 시프트 계산)
         private bool _hpBarBaseCaptured;
 
         public void SetDamageSink(System.Action<EnemyView, int> sink) => _damageSink = sink;
@@ -53,20 +54,24 @@ namespace Game.Runtime.Enemy
             if (boxCollider != null) boxCollider.size = worldSize;
             if (blockRenderer != null && blockRenderer.drawMode != SpriteDrawMode.Simple) blockRenderer.size = worldSize;
             CaptureHpBarBase();
-            if (_hpBarRect == null) return;
+            if (hpBarRoot == null) return;
             float fpH = Model != null ? Mathf.Max(1, Model.Footprint.Height) : 1;
             float extraHalf = worldSize.y * (1f - 1f / fpH) * 0.5f;
-            _hpBarRect.anchoredPosition = _hpBarBaseAnchored + new Vector2(0f, -extraHalf);
+            hpBarRoot.localPosition = _hpBarBaseLocalPos + new Vector3(0f, -extraHalf, 0f);
         }
 
         // 프리팹 기준 HP 바 위치를 최초 1회 캡처(풀 재사용 대비 원본 보존).
         private void CaptureHpBarBase()
         {
-            if (_hpBarBaseCaptured || hpCanvas == null) return;
-            _hpCanvasGroup =  hpCanvas.transform.GetComponent<CanvasGroup>();
-            _hpCanvasGroup.alpha = 0;
-            _hpBarRect = hpCanvas.transform as RectTransform;
-            if (_hpBarRect != null) _hpBarBaseAnchored = _hpBarRect.anchoredPosition;
+            if (_hpBarBaseCaptured || hpBarRoot == null) return;
+            _hpBarBaseLocalPos = hpBarRoot.localPosition;
+            if (hpFill != null)
+            {
+                _hpFillBaseScale = hpFill.transform.localScale;
+                _hpFillBaseLocalPos = hpFill.transform.localPosition;
+                _hpFillWidth = hpFill.sprite != null ? hpFill.sprite.bounds.size.x * _hpFillBaseScale.x : 0f; // 로컬 만피 폭
+            }
+            SetBarVisible(false); // 초기 숨김(등장 전)
             _hpBarBaseCaptured = true;
         }
 
@@ -90,8 +95,6 @@ namespace Game.Runtime.Enemy
             }
             if (boxCollider != null) boxCollider.enabled = true;
             transform.position = model.Position;
-            if (s_mainCamera == null) s_mainCamera = Camera.main; // 파괴/최초 시에만 스캔
-            hpCanvas.worldCamera = s_mainCamera;
             RefreshHp(model);
         }
         
@@ -140,7 +143,13 @@ namespace Game.Runtime.Enemy
         {
             if (blockRenderer != null) blockRenderer.enabled = on;
             if (mobRenderer != null) mobRenderer.enabled = on && mobRenderer.sprite != null;
-            if (_hpCanvasGroup != null)  _hpCanvasGroup.alpha = on ? 1 : 0;
+            SetBarVisible(on);
+        }
+
+        private void SetBarVisible(bool on)
+        {
+            if (hpBg != null) hpBg.enabled = on;
+            if (hpFill != null) hpFill.enabled = on;
         }
 
         // 덜컹 스쿼시: 위 몹만 눌러 밟는 느낌(넓게+낮게). 콜라이더 있는 돌 블록은 안 건드림.
@@ -193,11 +202,14 @@ namespace Game.Runtime.Enemy
 
         private void RefreshHp(EnemyModel model)
         {
-            if (hpSliderFill != null)
-            {
-                // 실제 maxHp 기준 비율. (구 /100f는 24·30·60HP 적이 만피여도 24%·30%·60%만 차던 버그.)
-                hpSliderFill.fillAmount = model.MaxHp > 0 ? (float)model.Hp / model.MaxHp : 0f;
-            }
+            if (hpFill == null) return;
+            CaptureHpBarBase(); // 베이스 스케일/폭을 RefreshHp가 스케일 수정 전에 확보(캡처 순서 보장, idempotent)
+            float pct = model.MaxHp > 0 ? (float)model.Hp / model.MaxHp : 0f;
+            // 좌측 고정 스케일 채움(fillAmount 대체): x만 pct배 + 왼쪽 가장자리 유지하도록 시프트.
+            Vector3 s = _hpFillBaseScale; s.x = _hpFillBaseScale.x * pct;
+            hpFill.transform.localScale = s;
+            Vector3 p = _hpFillBaseLocalPos; p.x = _hpFillBaseLocalPos.x - _hpFillWidth * 0.5f * (1f - pct);
+            hpFill.transform.localPosition = p;
         }
 
         private void HideVisuals()
@@ -205,6 +217,7 @@ namespace Game.Runtime.Enemy
             if (blockRenderer != null) blockRenderer.enabled = false;
             if (mobRenderer != null) mobRenderer.enabled = false;
             if (boxCollider != null) boxCollider.enabled = false;
+            SetBarVisible(false);
         }
 
         // IDamageable: 볼 → DamageResolver → 여기. 실제 처리(HP감산/사망/디스폰)는 컨트롤러로 포워드.
