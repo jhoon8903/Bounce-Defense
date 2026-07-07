@@ -57,3 +57,6 @@ crashlytics-build.properties
 /Assets/Layer Lab.meta
 Assets/Epic Toon FX/
 Assets/Epic Toon FX.meta
+
+# IL2CPP build temp
+.utmp/

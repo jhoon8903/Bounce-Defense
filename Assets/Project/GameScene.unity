@@ -1592,6 +1592,10 @@ PrefabInstance:
       propertyPath: autoLaunchOnPlay
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 739558544093698295, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
+      propertyPath: autoSweepDegrees
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 1013123045952868188, guid: 96f3b9526dbbe479dbc631488b92f692, type: 3}
       propertyPath: recoilKickDeg
       value: 20
