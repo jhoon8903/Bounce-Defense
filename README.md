@@ -21,11 +21,10 @@ PurpleCow 클라이언트 프로그래머 채용 과제. 서비스 중인 〈통
 
 ### APK 빌드 (Android)
 1. `File > Build Profiles` 에서 플랫폼을 **Android** 로 전환.
-2. `Player Settings > Configuration > Scripting Backend = IL2CPP`, `Target Architectures = ARM64`.
-3. **빌드 전 릴리스 정리**: `Player Settings > Scripting Define Symbols(Android)` 에서 **`FRAMEWORK_DEBUG` 를 제거**하세요. 이 심볼이 있으면 프레임워크 verbose 로그(`Verbose.D/W`)가 `[Conditional]` 스트립되지 않고 빌드에 포함됩니다. 제거하면 자동 스트립됩니다(코드 수정 불필요).
-4. **Build**.
+2. `Player Settings > Configuration > Scripting Backend = IL2CPP`, `Target Architectures = ARM64`. 애플리케이션 ID = `com.purplecow.bounce.defense`.
+3. **Build**.
 
-> 에디터 전용 개발 훅(`LaunchController`의 자동 발사 등)은 이미 `#if UNITY_EDITOR` 로 격리되어 빌드에는 포함되지 않습니다.
+> **릴리스 정리 적용 완료**: Android `Scripting Define Symbols` 에서 `FRAMEWORK_DEBUG` 를 제거해 프레임워크 verbose 로그(`Verbose.D/W`)가 `[Conditional]` 로 자동 스트립됩니다. 에디터 전용 개발 훅(`LaunchController` 자동 발사 등)도 `#if UNITY_EDITOR` 로 격리되어 빌드에 포함되지 않습니다.
 
 ---
 
@@ -98,7 +97,7 @@ MVC  +  Observable(Model→View)  +  Object Pool  +  단일 IClock 업데이트 
 - **궤적 미리보기**: 단일 프로시저 메시(드로우콜 1개) 점선으로 반사 경로 예측.
 
 **성능 최적화** (아래 §6 상세)
-- 오브젝트 풀링(볼·적·데미지 텍스트·모터·VFX), 물리 캐스트 NonAlloc화, 단일 업데이트 루프, 스프라이트 아틀라스 도메인 분리.
+- 오브젝트 풀링(볼·적·데미지 텍스트·모터·VFX), 물리 캐스트 NonAlloc화, 단일 업데이트 루프, URP SRP Batcher 통일(스프라이트 전부 단일 배치)·월드 캔버스 제거, 미사용 에셋 ~577MB 정리.
 
 ---
 
@@ -126,7 +125,13 @@ MVC  +  Observable(Model→View)  +  Object Pool  +  단일 IClock 업데이트 
 
 **렌더 (드로우콜 배치, 픽셀 불변)**
 - **스프라이트 아틀라스 도메인 분리**: 게임플레이(볼·몬스터·캐릭터·스킬 아이콘)와 UI를 각각 아틀라스로 묶어 드로우콜 배치. rotation/tight-packing off + padding으로 블리딩 방지.
-- URP 파이프라인의 2D 미사용 기능(Mixed Lighting·Lens Flare) off → 셰이더 변형·빌드 크기 감소. SRP Batcher on, HDR/MSAA/그림자 off(2D 모바일 최적).
+- **월드 캔버스 제거**: 적 HP 바(월드캔버스 → SpriteRenderer, 드로우콜 96→13)·플로팅 데미지 텍스트(월드캔버스 → TextMeshPro 3D)를 캔버스에서 떼어내 스프라이트/메시 배치에 편입 — 적마다 생기던 캔버스 렌더 아일랜드 제거.
+- **URP SRP Batcher 통일**: 씬의 모든 스프라이트 렌더러(볼·트레일·적 블록·몹·HP바·캐릭터)를 URP 셰이더로 통일. 적 피격 셰이더(`SpriteHitFlash`)를 레거시 CG → URP HLSL(`UnityPerMaterial` CBUFFER)로 재작성 + `MaterialPropertyBlock`(SRP 부적격) → 캐시 인스턴스 머티리얼로 전환해 적 렌더러를 배치에 편입. 볼+트레일은 전용 정렬 레이어로 분리(적과 Y-정렬 교차 제거).
+- **엔진 한계 인지**: `TrailRenderer`·`ParticleSystemRenderer` 등 동적 지오메트리 렌더러는 셰이더가 SRP 호환이어도 렌더러 레벨에서 배칭 제외 — 프레임 디버거로 확인 후 불필요한 셰이더 변환을 하지 않음(파티클 드로우콜은 머티리얼/아틀라스 공유가 정도).
+- URP 2D 미사용 기능(Mixed Lighting·Lens Flare·터레인/비디오 셰이더) off → 셰이더 변형·빌드 크기 감소. SRP Batcher on, HDR/MSAA/그림자 off(2D 모바일 최적).
+
+**빌드 크기**
+- 미사용 서드파티 라이브러리(Epic Toon FX·Cartoon FX Remaster·Layer Lab) 중 **실제 참조 애셋만 프로젝트로 이관하고 나머지 ~577MB 제거**. 의존성 그래프(`AssetDatabase.GetDependencies`)로 사용 애셋을 전수 수집 → GUID 보존 이관으로 참조 무결성·CFXR 커스텀 셰이더 임포터 유지 확인.
 
 ---
 
@@ -141,7 +146,7 @@ Assets/Project/
 │  └─ Game.Tests/      # EditMode 단위 테스트
 ├─ Configs/            # SO 에셋(스킬·적·볼·스테이지·그리드)
 ├─ Prefabs/            # 볼·적·파티클·UI 프리팹
-├─ Sources/            # 텍스처(GameTextures·UITextures) + 스프라이트 아틀라스
+├─ Sources/            # 텍스처·스프라이트 아틀라스 · Particles(VFX 머티리얼·셰이더) · Imported(외부 패키지서 이관한 사용 애셋)
 └─ GameScene.unity     # 유일한 플레이 씬
 ```
 
