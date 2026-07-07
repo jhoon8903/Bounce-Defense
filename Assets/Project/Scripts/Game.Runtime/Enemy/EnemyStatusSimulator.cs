@@ -31,11 +31,9 @@ namespace Game.Runtime.Enemy
             if (list != null)
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Type == EnemyStatusType.Burn)
-                    {
-                        hasBurn = true;
-                        break;
-                    }
+                    if (list[i].Type != EnemyStatusType.Burn) continue;
+                    hasBurn = true;
+                    break;
                 }
             if (hasBurn) { if (_burningIds.Add(id)) _setBurning?.Invoke(id, true); }
             else { if (_burningIds.Remove(id)) _setBurning?.Invoke(id, false); }
@@ -47,11 +45,9 @@ namespace Game.Runtime.Enemy
             if (list != null)
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Type == EnemyStatusType.Freeze)
-                    {
-                        hasFreeze = true;
-                        break;
-                    }
+                    if (list[i].Type != EnemyStatusType.Freeze) continue;
+                    hasFreeze = true;
+                    break;
                 }
             if (hasFreeze) { if (_frozenIds.Add(id)) _setFrozen?.Invoke(id, true); }
             else { if (_frozenIds.Remove(id)) _setFrozen?.Invoke(id, false); }
@@ -73,11 +69,9 @@ namespace Game.Runtime.Enemy
             {
                 if (list[i].Type != EnemyStatusType.Burn) continue;
                 burnCount++;
-                if (list[i].Remaining < weakestRemaining)
-                {
-                    weakestRemaining = list[i].Remaining;
-                    weakest = i;
-                }
+                if (!(list[i].Remaining < weakestRemaining)) continue;
+                weakestRemaining = list[i].Remaining;
+                weakest = i;
             }
 
             if (maxStacks > 0 && burnCount >= maxStacks && weakest >= 0)
@@ -151,11 +145,9 @@ namespace Game.Runtime.Enemy
                         {
                             st.TickAccumulator -= TickInterval;
                             _applyBurn?.Invoke(id, st.Dps);
-                            if (!_byId.ContainsKey(id))
-                            {
-                                despawned = true;
-                                break;
-                            }
+                            if (_byId.ContainsKey(id)) continue;
+                            despawned = true;
+                            break;
                         }
                         if (despawned) break;
                     }
@@ -169,7 +161,7 @@ namespace Game.Runtime.Enemy
                     continue;
                 }
 
-                if (_byId.TryGetValue(id, out List<StatusInstance> after))
+                if (!_byId.TryGetValue(id, out List<StatusInstance> after)) continue;
                 {
                     if (after.Count == 0)
                     {

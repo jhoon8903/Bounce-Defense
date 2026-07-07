@@ -9,8 +9,8 @@ namespace Game.Runtime.Grid
         private GridMap _map;
 
         public bool IsInitialized { get; private set; }
-        public int Cols => _map != null ? _map.Cols : 0;
-        public int Rows => _map != null ? _map.Rows : 0;
+        public int Cols => _map?.Cols ?? 0;
+        public int Rows => _map?.Rows ?? 0;
         public float CellSize => _geometry.CellSize;
 
         public void Initialize(int cols, int rows, float cellSize, Vector2 origin)
@@ -28,7 +28,7 @@ namespace Game.Runtime.Grid
 
         public bool CanPlace(CellCoord anchor, Footprint fp) => _map != null && _map.CanPlace(anchor, fp);
         public bool CanPlace(CellCoord anchor, Footprint fp, int ignoreHandle) => _map != null && _map.CanPlace(anchor, fp, ignoreHandle);
-        public int OccupantHandleAt(int col, int row) => _map != null ? _map.OccupantAt(col, row) : GridMap.Empty;
+        public int OccupantHandleAt(int col, int row) => _map?.OccupantAt(col, row) ?? GridMap.Empty;
 
         public bool Place(int handle, CellCoord anchor, Footprint fp)
         {

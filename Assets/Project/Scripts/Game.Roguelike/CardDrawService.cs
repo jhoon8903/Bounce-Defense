@@ -55,11 +55,15 @@ namespace Game.Roguelike
                 if (_loadout.Owns(skill))
                 {
                     int lv = _loadout.LevelOf(skill);
-                    if (lv < skill.MaxLevel) _candidates.Add(new SkillCard(skill, lv + 1, isNew: false));
+                    if (lv >= skill.MaxLevel) continue;
+                    SkillCard card = new SkillCard(skill, lv + 1, isNew: false);
+                    _candidates.Add(card);
                 }
                 else
                 {
-                    if (!_loadout.IsFull(skill.Category)) _candidates.Add(new SkillCard(skill, 1, isNew: true));
+                    if (_loadout.IsFull(skill.Category)) continue;
+                    SkillCard card = new SkillCard(skill, 1, isNew: true);
+                    _candidates.Add(card);
                 }
             }
         }

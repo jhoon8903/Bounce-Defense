@@ -67,12 +67,10 @@ namespace Game.Runtime.UI
         public void HideImmediate()
         {
             _shown = false;
-            if (group != null)
-            {
-                group.alpha = 0f;
-                group.blocksRaycasts = false;
-                group.interactable = false;
-            }
+            if (group == null) return;
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
         }
 
         private void Update()

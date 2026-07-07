@@ -27,11 +27,9 @@ namespace Game.Runtime.Combat
                     GameObject parentGo = new GameObject($"[Pool] {c.PoolName}");
                     if (poolRoot != null) parentGo.transform.SetParent(poolRoot);
                     _pools[c.SourceType] = new Pool<BallView>(c, parentGo.transform);
-                    if (!any)
-                    {
-                        first = c.SourceType;
-                        any = true;
-                    }
+                    if (any) continue;
+                    first = c.SourceType;
+                    any = true;
                 }
             }
             _fallbackType = _pools.ContainsKey(BallSourceType.Normal) ? BallSourceType.Normal : first;
@@ -41,12 +39,10 @@ namespace Game.Runtime.Combat
         {
             BallSourceType useType = _pools.ContainsKey(type) ? type : _fallbackType;
             if (!_pools.TryGetValue(useType, out Pool<BallView> pool)) return (null, null);
-
             BallView view = pool.Get();
             if (view == null) return (null, null);
             _resolver.Inject(view);
             _typeOf[view] = useType;
-
             BallModel model = new BallModel();
             model.Initialize(origin);
             view.Model = model;
@@ -58,7 +54,7 @@ namespace Game.Runtime.Combat
             if (view != null)
             {
                 view.Model = null;
-                BallSourceType type = _typeOf.TryGetValue(view, out BallSourceType t) ? t : _fallbackType;
+                BallSourceType type = _typeOf.GetValueOrDefault(view, _fallbackType);
                 _typeOf.Remove(view);
                 if (_pools.TryGetValue(type, out Pool<BallView> pool)) pool.Release(view);
             }

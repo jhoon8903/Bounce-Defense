@@ -39,8 +39,7 @@ namespace Game.Runtime.Enemy
 
         public void Remove(string id)
         {
-            if (_entries.TryGetValue(id, out Entry e) && e.View != null && ReferenceEquals(e.View.Model, e.Model))
-                e.View.SetRecoil(Vector2.zero);
+            if (_entries.TryGetValue(id, out Entry e) && e.View != null && ReferenceEquals(e.View.Model, e.Model)) e.View.SetRecoil(Vector2.zero);
             _entries.Remove(id);
         }
 

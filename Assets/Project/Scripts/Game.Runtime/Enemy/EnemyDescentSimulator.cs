@@ -36,7 +36,9 @@ namespace Game.Runtime.Enemy
             if (_models.Count == 0) return;
             _order.Clear();
             foreach (KeyValuePair<string, EnemyModel> kv in _models)
+            {
                 if (!kv.Value.IsEntering && !kv.Value.IsBreaching) _order.Add(kv.Key);
+            }
             if (_order.Count == 0) return;
             _order.Sort(_cmpByRowDesc);
             float cellSize = _grid.CellSize;

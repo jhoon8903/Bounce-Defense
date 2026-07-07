@@ -12,7 +12,16 @@ namespace Game.Runtime.Combat
         [SerializeField] private float gravity = -20f;
         [SerializeField] private float spinDeg = 320f;
 
-        private struct Part { public Transform t; public SpriteRenderer sr; public Vector3 pos0; public Quaternion rot0; public Color col0; public Vector2 vel; public float angVel; }
+        private struct Part 
+        { 
+            public Transform T; 
+            public SpriteRenderer Sr; 
+            public Vector3 Pos0; 
+            public Quaternion Rot0; 
+            public Color Col0; 
+            public Vector2 Vel; 
+            public float AngVel; 
+        }
         private Part[] _p;
         private float _t;
         private bool _playing;
@@ -39,12 +48,12 @@ namespace Game.Runtime.Combat
                 Vector2 vel = new Vector2(side * spreadSpeed, popUpSpeed);
                 _p[i] = new Part
                 {
-                    t = t, sr = sr,
-                    pos0 = t != null ? t.localPosition : Vector3.zero,
-                    rot0 = t != null ? t.localRotation : Quaternion.identity,
-                    col0 = sr != null ? sr.color : Color.white,
-                    vel = vel,
-                    angVel = -side * spinDeg + (side == 0f ? spinDeg : 0f),
+                    T = t, Sr = sr,
+                    Pos0 = t != null ? t.localPosition : Vector3.zero,
+                    Rot0 = t != null ? t.localRotation : Quaternion.identity,
+                    Col0 = sr != null ? sr.color : Color.white,
+                    Vel = vel,
+                    AngVel = -side * spinDeg + (side == 0f ? spinDeg : 0f),
                 };
             }
             _playing = true;
@@ -56,10 +65,10 @@ namespace Game.Runtime.Combat
             if (_p == null) return;
             for (int i = 0; i < _p.Length; i++)
             {
-                if (_p[i].t == null) continue;
-                _p[i].t.localPosition = _p[i].pos0;
-                _p[i].t.localRotation = _p[i].rot0;
-                if (_p[i].sr != null) _p[i].sr.color = _p[i].col0;
+                if (_p[i].T == null) continue;
+                _p[i].T.localPosition = _p[i].Pos0;
+                _p[i].T.localRotation = _p[i].Rot0;
+                if (_p[i].Sr != null) _p[i].Sr.color = _p[i].Col0;
             }
         }
 
@@ -72,24 +81,22 @@ namespace Game.Runtime.Combat
             for (int i = 0; i < _p.Length; i++)
             {
                 Part p = _p[i];
-                if (p.t == null) continue;
-                p.vel.y += gravity * dt;
-                p.t.localPosition += (Vector3)(p.vel * dt);
-                p.t.localRotation *= Quaternion.Euler(0f, 0f, p.angVel * dt);
-                if (p.sr != null)
+                if (p.T == null) continue;
+                p.Vel.y += gravity * dt;
+                p.T.localPosition += (Vector3)(p.Vel * dt);
+                p.T.localRotation *= Quaternion.Euler(0f, 0f, p.AngVel * dt);
+                if (p.Sr != null)
                 {
-                    Color c = p.col0;
+                    Color c = p.Col0;
                     c.a = 1f - k;
-                    p.sr.color = c;
+                    p.Sr.color = c;
                 }
                 _p[i] = p;
             }
-            if (_t >= duration)
-            {
-                _playing = false;
-                Action done = _onDone; _onDone = null;
-                done?.Invoke();
-            }
+            if (!(_t >= duration)) return;
+            _playing = false;
+            Action done = _onDone; _onDone = null;
+            done?.Invoke();
         }
     }
 }

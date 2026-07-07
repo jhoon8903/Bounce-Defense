@@ -13,24 +13,28 @@ namespace Game.Runtime.Motor
             float minY = bounds.min.y + r, maxY = bounds.max.y - r;
             float tx = float.PositiveInfinity, ty = float.PositiveInfinity;
             Vector2 nx = Vector2.zero, ny = Vector2.zero;
-            switch (dir.x)
+            if (dir.x > DirEps)
             {
-                case > DirEps:
-                    tx = (maxX - p.x) / dir.x; nx = Vector2.left;
-                    break;
-                case < -DirEps:
-                    tx = (minX - p.x) / dir.x; nx = Vector2.right;
-                    break;
+                tx = (maxX - p.x) / dir.x;
+                nx = Vector2.left;
             }
-            switch (dir.y)
+            else if (dir.x < -DirEps)
             {
-                case > DirEps:
-                    ty = (maxY - p.y) / dir.y; ny = Vector2.down;
-                    break;
-                case < -DirEps:
-                    ty = (minY - p.y) / dir.y; ny = Vector2.up;
-                    break;
+                tx = (minX - p.x) / dir.x;
+                nx = Vector2.right;
             }
+
+            if (dir.y > DirEps)
+            {
+                ty = (maxY - p.y) / dir.y;
+                ny = Vector2.down;
+            }
+            else if (dir.y < -DirEps)
+            {
+                ty = (minY - p.y) / dir.y;
+                ny = Vector2.up;
+            }
+
             float t;
             if (!float.IsPositiveInfinity(tx) && !float.IsPositiveInfinity(ty) && Mathf.Abs(tx - ty) < CornerEps)
             {

@@ -71,7 +71,7 @@ namespace Game.Runtime.Combat
 
         private float ScaleMul()
         {
-            if (_elapsed < PopIn)     return Mathf.Lerp(StartScale, Overshoot, _elapsed / PopIn);
+            if (_elapsed < PopIn) return Mathf.Lerp(StartScale, Overshoot, _elapsed / PopIn);
             if (_elapsed < PopSettle) return Mathf.Lerp(Overshoot, 1f, (_elapsed - PopIn) / (PopSettle - PopIn));
             if (_elapsed < FadeStart) return 1f;
             return Mathf.Lerp(1f, EndScale, (_elapsed - FadeStart) / (Lifetime - FadeStart));

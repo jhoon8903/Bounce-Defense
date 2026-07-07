@@ -46,11 +46,10 @@ namespace Game.Runtime.UI
                 _sliderDisplay = Mathf.MoveTowards(_sliderDisplay, _sliderTarget, Time.unscaledDeltaTime * sliderLerpSpeed);
                 slider.value = _sliderDisplay;
             }
-            if (_flashTimer > 0f)
-            {
-                _flashTimer -= Time.unscaledDeltaTime;
-                if (levelUpFlash != null) levelUpFlash.alpha = Mathf.Clamp01(_flashTimer / flashDuration);
-            }
+
+            if (!(_flashTimer > 0f)) return;
+            _flashTimer -= Time.unscaledDeltaTime;
+            if (levelUpFlash != null) levelUpFlash.alpha = Mathf.Clamp01(_flashTimer / flashDuration);
         }
     }
 }

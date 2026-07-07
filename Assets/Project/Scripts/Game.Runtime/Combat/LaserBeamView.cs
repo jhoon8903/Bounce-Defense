@@ -10,8 +10,8 @@ namespace Game.Runtime.Combat
         [SerializeField] private LineRenderer glowLine;
         [SerializeField] private float halfWidth = 4.5f;
         [SerializeField] private float lifetime = 0.7f;
-        [SerializeField] private Color coreColor = new Color(0.85f, 0.98f, 1f, 1f);
-        [SerializeField] private Color glowColor = new Color(0.30f, 0.85f, 1f, 1f);
+        [SerializeField] private Color coreColor = new(0.85f, 0.98f, 1f, 1f);
+        [SerializeField] private Color glowColor = new(0.30f, 0.85f, 1f, 1f);
         [SerializeField] private float coreWidth = 0.16f;
         [SerializeField] private float glowWidth = 0.80f;
         [SerializeField] private float holdFraction = 0.6f;

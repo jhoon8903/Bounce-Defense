@@ -21,10 +21,10 @@ namespace Game.Runtime.Combat
         private static readonly Vector2 OriginFallback = new(0f, -6.70f);
 
         private BallController _ballController;
-        private Vector2 _currentDirection = Vector2.up;
 
         public Vector2 Origin => launchOrigin ? launchOrigin.position : OriginFallback;
-        public Vector2 CurrentDirection => _currentDirection;
+        public Vector2 CurrentDirection { get; private set; } = Vector2.up;
+
         public int ShotsFired => _ballController?.ShotsFired ?? 0;
 
         [Inject]
@@ -67,7 +67,7 @@ namespace Game.Runtime.Combat
 
         private void TrackDirection(Vector2 direction)
         {
-            if (direction.sqrMagnitude > Mathf.Epsilon) _currentDirection = direction.normalized;
+            if (direction.sqrMagnitude > Mathf.Epsilon) CurrentDirection = direction.normalized;
         }
     }
 }

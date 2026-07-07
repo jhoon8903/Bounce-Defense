@@ -27,7 +27,7 @@ namespace Game.Runtime.Grid
         private int Index(int col, int row) => row * _cols + col;
 
         public bool FitsFootprint(CellCoord anchor, Footprint fp) =>
-            anchor.Col >= 0 && anchor.Row >= 0 &&
+            anchor is { Col: >= 0, Row: >= 0 } &&
             anchor.Col + fp.Width <= _cols &&
             anchor.Row + fp.Height <= _rows;
 
@@ -35,8 +35,12 @@ namespace Game.Runtime.Grid
         {
             if (!FitsFootprint(anchor, fp)) return false;
             for (int dy = 0; dy < fp.Height; dy++)
+            {
                 for (int dx = 0; dx < fp.Width; dx++)
+                {
                     if (_cells[Index(anchor.Col + dx, anchor.Row + dy)] != Empty) return false;
+                }
+            }
             return true;
         }
 
@@ -44,11 +48,13 @@ namespace Game.Runtime.Grid
         {
             if (!FitsFootprint(anchor, fp)) return false;
             for (int dy = 0; dy < fp.Height; dy++)
+            {
                 for (int dx = 0; dx < fp.Width; dx++)
                 {
                     int h = _cells[Index(anchor.Col + dx, anchor.Row + dy)];
                     if (h != Empty && h != ignoreHandle) return false;
                 }
+            }
             return true;
         }
 
@@ -63,12 +69,14 @@ namespace Game.Runtime.Grid
                 _cellsByHandle[handle] = list;
             }
             for (int dy = 0; dy < fp.Height; dy++)
+            {
                 for (int dx = 0; dx < fp.Width; dx++)
                 {
                     int idx = Index(anchor.Col + dx, anchor.Row + dy);
                     _cells[idx] = handle;
                     list.Add(idx);
                 }
+            }
             return true;
         }
 
@@ -76,7 +84,9 @@ namespace Game.Runtime.Grid
         {
             if (!_cellsByHandle.TryGetValue(handle, out List<int> list)) return false;
             for (int i = 0; i < list.Count; i++)
+            {
                 if (_cells[list[i]] == handle) _cells[list[i]] = Empty;
+            }
             list.Clear();
             _listPool.Push(list);
             _cellsByHandle.Remove(handle);

@@ -20,8 +20,7 @@ namespace Game.Runtime.Skills
         public void OnEnemyHit(IDamageable target, HitContext ctx, IBallEffectContext services)
         {
             if (_dps <= 0f || _duration <= 0f) return;
-            if (target is IStatusReceiver receiver)
-                receiver.ApplyBurn(_duration, _dps, _maxStacks);
+            if (target is IStatusReceiver receiver) receiver.ApplyBurn(_duration, _dps, _maxStacks);
         }
     }
 }

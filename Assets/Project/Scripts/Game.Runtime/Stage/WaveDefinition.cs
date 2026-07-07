@@ -48,11 +48,11 @@ namespace Game.Runtime.Stage
             get
             {
                 int max = -1;
-                if (placements != null)
-                    for (int i = 0; i < placements.Length; i++)
-                    {
-                        if (placements[i].enemy != null && placements[i].group > max) max = placements[i].group;
-                    }
+                if (placements == null) return max + 1;
+                for (int i = 0; i < placements.Length; i++)
+                {
+                    if (placements[i].enemy != null && placements[i].group > max) max = placements[i].group;
+                }
                 return max + 1;
             }
         }

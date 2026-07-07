@@ -102,7 +102,7 @@ namespace Game.Runtime.Enemy
 
         public bool CanSpawnAt(EnemyDefinition definition, CellCoord anchor)
         {
-            if (definition == null || _grid == null || !_grid.IsReady) return false;
+            if (definition == null || _grid is not { IsReady: true }) return false;
             return _grid.Model.CanPlace(anchor, definition.Footprint);
         }
 
@@ -154,7 +154,7 @@ namespace Game.Runtime.Enemy
 
             for (int i = 0; i < hits.Count; i++)
             {
-                if (!_grid.TryGetOccupant(hits[i], out IDamageable dmg) || !(dmg is EnemyView v) || v.Model == null) continue;
+                if (!_grid.TryGetOccupant(hits[i], out IDamageable dmg) || dmg is not EnemyView v || v.Model == null) continue;
                 if (v.Model.IsDead || v.Model.IsEntering) continue;
                 Vector2 pos = v.Model.Position;
                 HitContext ctx = HitContext.Secondary(v, BallSourceType.Normal, DamageKind.Explosion, _lastMatchDamage);

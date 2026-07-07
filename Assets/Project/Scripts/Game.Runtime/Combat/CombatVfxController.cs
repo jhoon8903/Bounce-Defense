@@ -38,11 +38,9 @@ namespace Game.Runtime.Combat
                     GameObject parentGo = new GameObject($"[Pool] {c.PoolName}");
                     if (poolRoot != null) parentGo.transform.SetParent(poolRoot);
                     _impactPools[c.SourceType] = new Pool<ImpactVfxView>(c, parentGo.transform);
-                    if (!any)
-                    {
-                        first = c.SourceType;
-                        any = true;
-                    }
+                    if (any) continue;
+                    first = c.SourceType;
+                    any = true;
                 }
             }
             _fallbackType = _impactPools.ContainsKey(BallSourceType.Normal) ? BallSourceType.Normal : first;
@@ -71,12 +69,10 @@ namespace Game.Runtime.Combat
                 if (poolRoot != null) lzGo.transform.SetParent(poolRoot);
                 _laserPool = new Pool<LaserBeamView>(laserConfig, lzGo.transform);
             }
-            if (bloodConfig != null && bloodConfig.Prefab != null)
-            {
-                GameObject bGo = new GameObject($"[Pool] {bloodConfig.PoolName}");
-                if (poolRoot != null) bGo.transform.SetParent(poolRoot);
-                _bloodPool = new Pool<ImpactVfxView>(bloodConfig, bGo.transform);
-            }
+            if (bloodConfig == null || bloodConfig.Prefab == null) return;
+            GameObject bGo = new GameObject($"[Pool] {bloodConfig.PoolName}");
+            if (poolRoot != null) bGo.transform.SetParent(poolRoot);
+            _bloodPool = new Pool<ImpactVfxView>(bloodConfig, bGo.transform);
         }
 
         protected override void OnInitialize()
@@ -200,11 +196,7 @@ namespace Game.Runtime.Combat
 
         private void ReturnToPool(ImpactVfxView fx)
         {
-            if (_poolOf.TryGetValue(fx, out Pool<ImpactVfxView> pool))
-            {
-                _poolOf.Remove(fx);
-                pool.Release(fx);
-            }
+            if (_poolOf.Remove(fx, out Pool<ImpactVfxView> pool)) pool.Release(fx);
         }
     }
 }

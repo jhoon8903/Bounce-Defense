@@ -30,8 +30,7 @@ namespace Game.Runtime.Combat
             Pointer pointer = Pointer.current;
             if (pointer == null || launchController == null) return;
             if (!pointer.press.isPressed) return;
-            if ((_clock != null && _clock.GameSpeed <= 0f) || IsPointerOverUI()) return;
-
+            if (_clock is { GameSpeed: <= 0f } || IsPointerOverUI()) return;
             Vector2 dir = ComputeClampedDirection(pointer.position.ReadValue(), launchController.Origin);
             if (!_firingStarted)
             {

@@ -68,11 +68,9 @@ namespace Game.Runtime.UI
             {
                 if (currentValueText != null) currentValueText.SetText("{0}", def.GetBallDamage(card.Level - 1));
                 if (upgradeMarker != null) upgradeMarker.SetActive(true);
-                if (upgradeValueText != null)
-                {
-                    upgradeValueText.gameObject.SetActive(true);
-                    upgradeValueText.SetText("{0}", def.GetBallDamage(card.Level));
-                }
+                if (upgradeValueText == null) return;
+                upgradeValueText.gameObject.SetActive(true);
+                upgradeValueText.SetText("{0}", def.GetBallDamage(card.Level));
             }
         }
 

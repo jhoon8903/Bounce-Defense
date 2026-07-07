@@ -75,13 +75,11 @@ namespace Game.Runtime.Progression
             while (_level.TryConsumeLevelUp())
             {
                 System.Collections.Generic.List<SkillCard> cards = _draw.Draw(DrawCount);
-                if (cards.Count > 0)
-                {
-                    _drafting = true;
-                    _clock.GameSpeed = 0f;
-                    _cardView.Show(cards, OnCardPicked);
-                    return;
-                }
+                if (cards.Count <= 0) continue;
+                _drafting = true;
+                _clock.GameSpeed = 0f;
+                _cardView.Show(cards, OnCardPicked);
+                return;
             }
             EndDraft();
         }

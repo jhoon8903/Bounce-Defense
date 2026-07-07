@@ -44,12 +44,10 @@ namespace Game.Runtime.UI
         public void HideImmediate()
         {
             _shown = false;
-            if (group != null)
-            {
-                group.alpha = 0f;
-                group.blocksRaycasts = false;
-                group.interactable = false;
-            }
+            if (group == null) return;
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
         }
 
         private void Update()
@@ -58,13 +56,11 @@ namespace Game.Runtime.UI
             float dt = Time.unscaledDeltaTime;
             _t += dt;
             if (group != null && group.alpha < 1f) group.alpha = Mathf.Clamp01(group.alpha + dt / Mathf.Max(0.01f, fadeDuration));
-            if (head != null)
-            {
-                head.localRotation = _headBaseRot * Quaternion.Euler(0f, 0f, Mathf.Sin(_t * wobbleFreq) * wobbleAmpDeg);
-                head.anchoredPosition = _headBasePos + new Vector2(
-                    Mathf.Sin(_t * wobbleFreq * 2.3f) * rattleAmp,
-                    Mathf.Cos(_t * wobbleFreq * 1.7f) * rattleAmp * 0.6f);
-            }
+            if (head == null) return;
+            head.localRotation = _headBaseRot * Quaternion.Euler(0f, 0f, Mathf.Sin(_t * wobbleFreq) * wobbleAmpDeg);
+            head.anchoredPosition = _headBasePos + new Vector2(
+                Mathf.Sin(_t * wobbleFreq * 2.3f) * rattleAmp,
+                Mathf.Cos(_t * wobbleFreq * 1.7f) * rattleAmp * 0.6f);
         }
 
         private void Restart()

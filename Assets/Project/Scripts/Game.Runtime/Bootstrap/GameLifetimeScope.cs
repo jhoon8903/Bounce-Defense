@@ -70,7 +70,7 @@ namespace Game.Runtime.Bootstrap
             builder.Register<CombatEventHub>(Lifetime.Singleton);
             builder.Register<DamageStats>(Lifetime.Singleton);
             builder.Register<HitFeedbackController>(Lifetime.Singleton);
-            builder.Register<CombatVfxController>(container =>
+            builder.Register(container =>
                 new CombatVfxController(config.ImpactConfigs, config.ExplosionConfig, config.ClusterConfig, config.DeathConfig, config.LaserConfig, config.BloodConfig,
                     poolParent, container.Resolve<IClock>(), container.Resolve<CombatEventHub>()), Lifetime.Singleton);
         }
@@ -100,11 +100,9 @@ namespace Game.Runtime.Bootstrap
             builder.RegisterInstance(config.GridConfig != null ? config.GridConfig : ScriptableObject.CreateInstance<GridConfig>());
             builder.Register<GridController>(Lifetime.Singleton);
             if (gridDebugView) builder.RegisterComponent(gridDebugView);
-            if (charReady)
-            {
-                builder.RegisterComponent(charView);
-                builder.Register<CharController>(Lifetime.Singleton);
-            }
+            if (!charReady) return;
+            builder.RegisterComponent(charView);
+            builder.Register<CharController>(Lifetime.Singleton);
         }
 
         private void ConfigureEnemy(IContainerBuilder builder)
@@ -119,8 +117,8 @@ namespace Game.Runtime.Bootstrap
             builder.Register<StageController>(Lifetime.Singleton);
 
             CharDeathView charDeathView = FindFirstObjectByType<CharDeathView>();
-            builder.Register(resolver => new DefeatSequenceController(
-                resolver.Resolve<StageController>(), resolver.Resolve<IClock>(), charDeathView), Lifetime.Singleton);
+            builder.Register(resolver => 
+                new DefeatSequenceController(resolver.Resolve<StageController>(), resolver.Resolve<IClock>(), charDeathView), Lifetime.Singleton);
 
             ClearView clearView = FindFirstObjectByType<ClearView>();
             DefeatedView defeatedView = FindFirstObjectByType<DefeatedView>();
@@ -131,7 +129,7 @@ namespace Game.Runtime.Bootstrap
 
         private void ConfigureRoguelike(IContainerBuilder builder, bool draftReady)
         {
-            builder.RegisterInstance(new SystemRandom(UnityEngine.Random.Range(1, int.MaxValue))).As<IRandom>();
+            builder.RegisterInstance(new SystemRandom(Random.Range(1, int.MaxValue))).As<IRandom>();
             builder.Register<PlayerLoadout>(Lifetime.Singleton);
             builder.RegisterInstance(config.SkillDatabase != null ? config.SkillDatabase : ScriptableObject.CreateInstance<SkillDatabase>());
             builder.Register(resolver =>
@@ -141,13 +139,10 @@ namespace Game.Runtime.Bootstrap
             }, Lifetime.Singleton);
             builder.Register<CardDrawService>(Lifetime.Singleton);
             builder.Register<SkillRuntime>(Lifetime.Singleton);
-
-            if (draftReady)
-            {
-                builder.RegisterComponent(levelProgressView);
-                builder.RegisterComponent(cardSelectView);
-                builder.Register<CardDraftController>(Lifetime.Singleton);
-            }
+            if (!draftReady) return;
+            builder.RegisterComponent(levelProgressView);
+            builder.RegisterComponent(cardSelectView);
+            builder.Register<CardDraftController>(Lifetime.Singleton);
         }
     }
 }

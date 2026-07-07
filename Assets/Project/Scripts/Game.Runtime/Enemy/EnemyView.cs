@@ -261,12 +261,11 @@ namespace Game.Runtime.Enemy
                 _blockMat.SetColor(FlashColorId, FlashWhite);
                 _blockMat.SetColor(FrostColorId, FrostCyan);
             }
-            if (_mobMat == null && mobRenderer != null)
-            {
-                _mobMat = mobRenderer.material;
-                _mobMat.SetColor(FlashColorId, FlashWhite);
-                _mobMat.SetColor(FrostColorId, FrostCyan);
-            }
+
+            if (_mobMat != null || mobRenderer == null) return;
+            _mobMat = mobRenderer.material;
+            _mobMat.SetColor(FlashColorId, FlashWhite);
+            _mobMat.SetColor(FrostColorId, FrostCyan);
         }
 
         private void ApplyOverlay()
@@ -277,11 +276,10 @@ namespace Game.Runtime.Enemy
                 _blockMat.SetFloat(FlashAmountId, _flashAmount);
                 _blockMat.SetFloat(FrostAmountId, _frostAmount);
             }
-            if (_mobMat != null)
-            {
-                _mobMat.SetFloat(FlashAmountId, _flashAmount);
-                _mobMat.SetFloat(FrostAmountId, _frostAmount);
-            }
+
+            if (_mobMat == null) return;
+            _mobMat.SetFloat(FlashAmountId, _flashAmount);
+            _mobMat.SetFloat(FrostAmountId, _frostAmount);
         }
 
         public override void OnInactive()

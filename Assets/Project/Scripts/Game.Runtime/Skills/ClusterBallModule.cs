@@ -19,8 +19,9 @@ namespace Game.Runtime.Skills
         {
             if (_chance <= 0f || _specialDamage <= 0f || services?.Random == null) return;
             if (!services.Random.NextBool(_chance)) return;
-            UnityEngine.Vector2 at = target is Game.Runtime.Enemy.EnemyView ev && ev.Model != null
-                ? ev.Model.Position : UnityEngine.Vector2.zero;
+            UnityEngine.Vector2 at = target is Enemy.EnemyView { Model: not null } ev
+                ? ev.Model.Position 
+                : UnityEngine.Vector2.zero;
             services.SpawnClusterBall(at, _specialDamage);
         }
     }

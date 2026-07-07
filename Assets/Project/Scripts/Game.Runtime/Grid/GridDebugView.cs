@@ -25,11 +25,11 @@ namespace Game.Runtime.Grid
         {
             if (!drawGrid && !drawOccupancy) return;
 
-            bool ready = Application.isPlaying && _controller != null && _controller.IsReady;
+            bool ready = Application.isPlaying && _controller is { IsReady: true };
             int c = ready ? _controller.Cols : cols;
             int r = ready ? _controller.Rows : rows;
             float size = ready ? _controller.CellSize : cellSize;
-            Vector2 origin = ready ? _controller.Origin : (Vector2)transform.position;
+            Vector2 origin = ready ? _controller.Origin : transform.position;
 
             float halfCol = (c - 1) * 0.5f;
             float halfRow = (r - 1) * 0.5f;
@@ -39,24 +39,31 @@ namespace Game.Runtime.Grid
                 Gizmos.color = lineColor;
                 Vector3 wire = new(size * 0.98f, size * 0.98f, 0.01f);
                 for (int row = 0; row < r; row++)
+                {
                     for (int col = 0; col < c; col++)
                     {
-                        Vector3 center = new(origin.x + (col - halfCol) * size, origin.y + (halfRow - row) * size, 0f);
+                        float x = origin.x + (col - halfCol) * size;
+                        float y = origin.y + (halfRow - row) * size;
+                        Vector3 center = new(x, y, 0f);
                         Gizmos.DrawWireCube(center, wire);
                     }
+                }
             }
 
-            if (drawOccupancy && ready)
+            if (!drawOccupancy || !ready) return;
             {
                 Gizmos.color = occupiedColor;
                 Vector3 fill = new(size * 0.9f, size * 0.9f, 0.01f);
                 for (int row = 0; row < r; row++)
+                {
                     for (int col = 0; col < c; col++)
-                        if (_controller.IsCellOccupied(col, row))
-                        {
-                            Vector2 w = _controller.CellToWorld(col, row);
-                            Gizmos.DrawCube(new Vector3(w.x, w.y, 0f), fill);
-                        }
+                    {
+                        if (!_controller.IsCellOccupied(col, row)) continue;
+                        Vector2 w = _controller.CellToWorld(col, row);
+                        Gizmos.DrawCube(new Vector3(w.x, w.y, 0f), fill);
+
+                    }
+                }
             }
         }
     }

@@ -43,7 +43,10 @@ namespace Game.Runtime.Motor
             if (!_mf) _mf = gameObject.AddComponent<MeshFilter>();
             _mr = GetComponent<MeshRenderer>();
             if (!_mr) _mr = gameObject.AddComponent<MeshRenderer>();
-            _mesh = new Mesh { name = "TrajectoryDots" };
+            _mesh = new Mesh
+            {
+                name = "TrajectoryDots"
+            };
             _mesh.MarkDynamic();
             _mf.mesh = _mesh;
             Shader shader = Shader.Find("Sprites/Default");
@@ -55,7 +58,13 @@ namespace Game.Runtime.Motor
             _mr.sortingOrder = sortingOrder;
             _mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _mr.receiveShadows = false;
-            _castFilter = new ContactFilter2D { useTriggers = Physics2D.queriesHitTriggers, useLayerMask = true, layerMask = wallMask.value | enemyMask.value | blockMask.value, useDepth = false };
+            _castFilter = new ContactFilter2D
+            {
+                useTriggers = Physics2D.queriesHitTriggers, 
+                useLayerMask = true, 
+                layerMask = wallMask.value | enemyMask.value | blockMask.value, 
+                useDepth = false
+            };
         }
 
         private void LateUpdate()
@@ -119,16 +128,22 @@ namespace Game.Runtime.Motor
         private static Texture2D BuildCircleTexture()
         {
             const int size = 32;
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear, 
+                wrapMode = TextureWrapMode.Clamp
+            };
             const float r = size * 0.5f;
             Color32[] px = new Color32[size * size];
             for (int y = 0; y < size; y++)
+            {
                 for (int x = 0; x < size; x++)
                 {
                     float dx = x + 0.5f - r, dy = y + 0.5f - r;
                     float a = Mathf.Clamp01((r - Mathf.Sqrt(dx * dx + dy * dy)) * 1.5f);
                     px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
                 }
+            }
             tex.SetPixels32(px);
             tex.Apply();
             return tex;

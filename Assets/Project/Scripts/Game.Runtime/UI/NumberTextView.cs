@@ -18,11 +18,9 @@ namespace Game.Runtime.UI
 
         private void Awake()
         {
-            if (text != null)
-            {
-                _rt = text.rectTransform;
-                _baseScale = _rt.localScale;
-            }
+            if (text == null) return;
+            _rt = text.rectTransform;
+            _baseScale = _rt.localScale;
         }
 
         public void SetFormat(string format)
@@ -61,7 +59,8 @@ namespace Game.Runtime.UI
                     Render(v);
                 }
             }
-            if (_rt != null && _popT < popDuration)
+
+            if (_rt == null || !(_popT < popDuration)) return;
             {
                 _popT += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(_popT / popDuration);

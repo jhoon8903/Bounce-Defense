@@ -150,12 +150,12 @@ namespace Game.Core.Pool
 
         private void DestroyPool(Type type)
         {
-            if (_pools.TryGetValue(type, out var poolObj))
+            if (_pools.TryGetValue(type, out object poolObj))
             {
                 if (poolObj is IDisposable disposable) disposable.Dispose();
                 _pools.Remove(type);
             }
-            if (!_poolParents.TryGetValue(type, out var parent) || !parent) return;
+            if (!_poolParents.TryGetValue(type, out Transform parent) || !parent) return;
             UnityEngine.Object.Destroy(parent.gameObject);
             _poolParents.Remove(type);
         }

@@ -7,10 +7,9 @@ namespace Game.Runtime.Combat
         private const float FireInterval = 0.12f;
 
         private bool _firing;
-        private Vector2 _direction = Vector2.up;
         private float _timer;
 
-        public Vector2 Direction => _direction;
+        public Vector2 Direction { get; private set; } = Vector2.up;
 
         public void Start(Vector2 direction)
         {
@@ -21,7 +20,7 @@ namespace Game.Runtime.Combat
 
         public void SetDirection(Vector2 direction)
         {
-            if (direction.sqrMagnitude > Mathf.Epsilon) _direction = direction.normalized;
+            if (direction.sqrMagnitude > Mathf.Epsilon) Direction = direction.normalized;
         }
 
         public bool TryFire(float deltaTime, int inFlight, int maxInFlight)

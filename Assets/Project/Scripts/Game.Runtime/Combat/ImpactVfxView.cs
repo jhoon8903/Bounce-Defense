@@ -44,7 +44,11 @@ namespace Game.Runtime.Combat
             transform.position = worldPos;
             _elapsed = 0f;
             _alive = true;
-            if (_roots == null) CacheRoots();
+            if (_roots == null)
+            {
+                CacheRoots();
+                return;
+            }
             for (int i = 0; i < _roots.Length; i++)
             {
                 ParticleSystem ps = _roots[i];

@@ -25,7 +25,6 @@ namespace Game.Runtime.Combat
         private readonly BallConfig _config;
         private readonly DamageResolver _resolver;
         private readonly CombatEventHub _hub;
-        private readonly IRandom _random;
         private readonly GridController _grid;
         private readonly BallFiringScheduler _scheduler = new();
         private readonly Dictionary<string, BallModel> _models = new();
@@ -56,16 +55,16 @@ namespace Game.Runtime.Combat
             _config = config;
             _resolver = resolver;
             _hub = hub;
-            _random = random;
+            Random = random;
             _grid = grid;
         }
 
-        public IRandom Random => _random;
+        public IRandom Random { get; }
 
         public void DamageEnemyRow(IDamageable originEnemy, float flatDamage, BallSourceType source)
         {
-            if (_resolver == null || _grid == null || !_grid.IsReady || flatDamage <= 0f) return;
-            if (!(originEnemy is EnemyView originView) || originView.Model == null) return;
+            if (_resolver == null || _grid is not { IsReady: true } || flatDamage <= 0f) return;
+            if (originEnemy is not EnemyView originView || originView.Model == null) return;
             int row = _grid.Model.WorldToCell(originView.Model.Position).Row;
             int cols = _grid.Cols;
             _hub?.RaiseLaserRow(new Vector2(0f, _grid.CellToWorld(0, row).y));
@@ -75,7 +74,7 @@ namespace Game.Runtime.Combat
                 int handle = _grid.OccupantHandleAt(col, row);
                 if (handle == GridMap.Empty || !_rowHitHandles.Add(handle)) continue;
                 if (!_grid.TryGetOccupant(handle, out IDamageable occ) || occ == originEnemy) continue;
-                Vector2 pos = occ is EnemyView ev && ev.Model != null ? ev.Model.Position : Vector2.zero;
+                Vector2 pos = occ is EnemyView { Model: not null } ev ? ev.Model.Position : Vector2.zero;
                 HitContext ctx = HitContext.Secondary(occ, source, DamageKind.LaserRow, flatDamage);
                 _resolver.Resolve(ref ctx);
                 if (ctx.FinalDamage > 0 && occ is EnemyView ev2) _hub?.RaiseHit(ev2, pos, ctx.FinalDamage, ctx.IsCrit, Vector2.zero, source, ctx.Kind);
@@ -92,7 +91,7 @@ namespace Game.Runtime.Combat
         public void SetRoster(IReadOnlyList<BallSpawnSpec> specs)
         {
             _roster.Clear();
-            if (specs != null && specs.Count > 0) _roster.AddRange(specs);
+            if (specs is { Count: > 0 }) _roster.AddRange(specs);
             else BuildDefaultRoster();
             RecomputeDesired();
         }
@@ -122,10 +121,8 @@ namespace Game.Runtime.Combat
 
         protected override void OnFixedTick(float fixedDeltaTime)
         {
-            if (_scheduler.TryFire(fixedDeltaTime, _models.Count, _roster.Count) && TryPickSpec(out BallSpawnSpec spec))
-                Spawn(_collectTarget, _scheduler.Direction, spec);
+            if (_scheduler.TryFire(fixedDeltaTime, _models.Count, _roster.Count) && TryPickSpec(out BallSpawnSpec spec)) Spawn(_collectTarget, _scheduler.Direction, spec);
             if (_models.Count == 0) return;
-
             float collectSpeed = _config != null ? _config.Speed : 12f;
             _idCache.Clear();
             _idCache.AddRange(_models.Keys);
@@ -133,7 +130,6 @@ namespace Game.Runtime.Combat
             {
                 string id = _idCache[i];
                 if (!_models.TryGetValue(id, out BallModel model)) continue;
-
                 if (_collecting.Contains(id))
                 {
                     Vector2 toTarget = _collectTarget - model.Position;
@@ -147,11 +143,8 @@ namespace Game.Runtime.Combat
                 BallMotorStepResult result = motor.Step(fixedDeltaTime);
                 model.SetPosition(motor.Position);
                 if (result.BounceCountThisStep > 0) model.RegisterBounce(result.BounceCountThisStep);
-
                 ResolveDamageHits(id, motor);
-
                 if (_mirrorPercent > 0f && result.WallBounceCountThisStep > 0) _mirrorArmed.Add(id);
-
                 if (result.HitFloor)
                 {
                     _collecting.Add(id);
@@ -175,7 +168,7 @@ namespace Game.Runtime.Combat
         {
             if (damage <= 0f) return;
             _hub?.RaiseClusterBurst(origin);
-            float t = _random != null ? _random.NextFloat() : 0.5f;
+            float t = Random?.NextFloat() ?? 0.5f;
             float angle = Mathf.Deg2Rad * (20f + t * 140f);
             Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             BallSpawnSpec spec = new BallSpawnSpec(BallSourceType.Cluster, damage, null, false, DamageKind.ClusterSpawn);
@@ -186,15 +179,12 @@ namespace Game.Runtime.Combat
         {
             float speed = _config != null ? _config.Speed : 12f;
             float radius = _config != null ? _config.Radius : 0.15f;
-
             string id = _factory.GenerateId();
             (BallModel model, BallView view) = _factory.Create(origin, spec.SourceType);
             if (model == null || view == null) return null;
-
             int passThroughMask = spec.PenetratesEnemies ? _enemyMask : 0;
             KinematicRaycastMotor motor = _motorPool.Count > 0 ? _motorPool.Pop() : new KinematicRaycastMotor();
             motor.Init(origin, direction, speed, radius, _wallMask, _enemyMask, _blockMask, passThroughMask);
-
             _models[id] = model;
             _views[id] = view;
             _motors[id] = motor;
@@ -234,8 +224,7 @@ namespace Game.Runtime.Combat
             if (!_models.TryGetValue(id, out BallModel model)) return;
             _views.TryGetValue(id, out BallView view);
             _factory.Release(model, view);
-            if (!_unmanaged.Remove(id) && _specs.TryGetValue(id, out BallSpawnSpec spec))
-                _inFlightByType[spec.SourceType] = Mathf.Max(0, InFlightOf(spec.SourceType) - 1);
+            if (!_unmanaged.Remove(id) && _specs.TryGetValue(id, out BallSpawnSpec spec)) _inFlightByType[spec.SourceType] = Mathf.Max(0, InFlightOf(spec.SourceType) - 1);
             if (_motors.TryGetValue(id, out IBallMotor usedMotor) && usedMotor is KinematicRaycastMotor krm) _motorPool.Push(krm);
             _models.Remove(id);
             _views.Remove(id);
@@ -249,23 +238,17 @@ namespace Game.Runtime.Combat
         {
             _idCache.Clear();
             _idCache.AddRange(_models.Keys);
-            for (int i = _idCache.Count - 1; i >= 0; i--)
-            {
-                Release(_idCache[i]);
-            }
+            for (int i = _idCache.Count - 1; i >= 0; i--) Release(_idCache[i]);
         }
 
         private void BuildDefaultRoster()
         {
             _roster.Clear();
             BallSpawnSpec normal = DefaultSpec();
-            for (int i = 0; i < DefaultBallCount; i++)
-            {
-                _roster.Add(normal);
-            }
+            for (int i = 0; i < DefaultBallCount; i++) _roster.Add(normal);
         }
 
-        private BallSpawnSpec DefaultSpec() => new BallSpawnSpec(BallSourceType.Normal, 0f, null);
+        private BallSpawnSpec DefaultSpec() => new(BallSourceType.Normal, 0f, null);
 
         private void RecomputeDesired()
         {
@@ -273,7 +256,7 @@ namespace Game.Runtime.Combat
             for (int i = 0; i < _roster.Count; i++)
             {
                 BallSourceType t = _roster[i].SourceType;
-                _desiredByType[t] = (_desiredByType.TryGetValue(t, out int c) ? c : 0) + 1;
+                _desiredByType[t] = (_desiredByType.GetValueOrDefault(t, 0)) + 1;
             }
         }
 
@@ -282,18 +265,16 @@ namespace Game.Runtime.Combat
             for (int i = 0; i < _roster.Count; i++)
             {
                 BallSourceType t = _roster[i].SourceType;
-                int desired = _desiredByType.TryGetValue(t, out int d) ? d : 0;
-                if (InFlightOf(t) < desired)
-                {
-                    spec = _roster[i];
-                    return true;
-                }
+                int desired = _desiredByType.GetValueOrDefault(t, 0);
+                if (InFlightOf(t) >= desired) continue;
+                spec = _roster[i];
+                return true;
             }
             spec = default;
             return false;
         }
 
-        private int InFlightOf(BallSourceType type) => _inFlightByType.TryGetValue(type, out int c) ? c : 0;
+        private int InFlightOf(BallSourceType type) => _inFlightByType.GetValueOrDefault(type, 0);
 
         private static bool IsOutOfBounds(Vector2 pos)
         {
