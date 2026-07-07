@@ -1,0 +1,17 @@
+<!--
+  IL2CPP 스트리핑 방지 (link.xml).
+
+  VContainer(리플렉션 기반 DI)가 생성자/필드 주입으로만 닿는 타입·생성자가 IL2CPP 코드 스트리핑에
+  지워지면, 에디터에선 멀쩡한데 IL2CPP APK 런타임에서만 크래시한다(주입 실패). 안드로이드 실기 테스트가
+  제한적인 상황이라, DI가 닿는 게임 어셈블리 전부 + VContainer 자체를 보존해 그 리스크를 원천 제거한다.
+
+  ※ Game.Runtime 폴더(GameLifetimeScope·컨트롤러·뷰·팩토리·부트스트랩 = DI 주입 대상 다수)는
+    별도 asmdef가 없어 Assembly-CSharp 로 컴파일된다 → Assembly-CSharp 보존이 핵심.
+-->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all"/>
+  <assembly fullname="Game.Core" preserve="all"/>
+  <assembly fullname="Game.Skills" preserve="all"/>
+  <assembly fullname="Game.Roguelike" preserve="all"/>
+  <assembly fullname="VContainer" preserve="all"/>
+</linker>
