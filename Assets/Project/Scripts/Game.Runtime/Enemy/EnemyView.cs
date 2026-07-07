@@ -23,9 +23,11 @@ namespace Game.Runtime.Enemy
         private System.Action<EnemyView, float, float, int> _burnSink; // (view, duration, dps, maxStacks)
         private System.Action<EnemyView, float, float> _freezeSink;    // (view, duration, slow)
 
-        // 몸체 오버레이(SpriteHitFlash 셰이더): 히트 화이트 플래시(순간) + 냉동 파랑 틴트(지속).
-        // 둘 다 하나의 MaterialPropertyBlock에 공존 — 따로 쓰면 SetPropertyBlock이 서로를 덮어써서 하나가 사라짐(제로할당·공유머티리얼 무변경).
-        private MaterialPropertyBlock _overlayMpb;
+        // 몸체 오버레이(SpriteHitFlash URP 셰이더): 히트 화이트 플래시(순간) + 냉동 파랑 틴트(지속).
+        // 렌더러별 인스턴스 머티리얼에 직접 SetFloat/SetColor. MPB는 렌더러를 SRP 배처 부적격으로 만들어 금지 —
+        // 인스턴스 머티리얼(같은 셰이더, 다른 값)은 SRP 배칭됨. 풀 오브젝트라 인스턴스는 최초 1회 생성 후 영구 재사용(핫패스 할당 0).
+        private Material _blockMat;
+        private Material _mobMat;
         private float _flashAmount;
         private float _frostAmount;
         private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
@@ -270,16 +272,37 @@ namespace Game.Runtime.Enemy
             ApplyOverlay();
         }
 
-        // 플래시(순간)+틴트(지속)를 한 블록에 담아 블록+몹에 적용. 둘 중 하나만 갱신해도 나머지 값 유지(상호 덮어쓰기 방지).
+        // 최초 1회 렌더러별 인스턴스 머티리얼 생성·캐시(풀 재사용 → 이후 할당 0). 상수 색(플래시 흰·서리 청록)도 여기서 1회.
+        private void EnsureOverlayMaterials()
+        {
+            if (_blockMat == null && blockRenderer != null)
+            {
+                _blockMat = blockRenderer.material; // 인스턴스 사본 생성·바인딩(SpriteHitFlash). 이후 이 렌더러 전용.
+                _blockMat.SetColor(FlashColorId, FlashWhite);
+                _blockMat.SetColor(FrostColorId, FrostCyan);
+            }
+            if (_mobMat == null && mobRenderer != null)
+            {
+                _mobMat = mobRenderer.material;
+                _mobMat.SetColor(FlashColorId, FlashWhite);
+                _mobMat.SetColor(FrostColorId, FrostCyan);
+            }
+        }
+
+        // 플래시(순간)+틴트(지속) 양을 블록+몹 인스턴스 머티리얼에 적용. 둘은 독립 값이라 상호 덮어쓰기 없음.
         private void ApplyOverlay()
         {
-            _overlayMpb ??= new MaterialPropertyBlock();
-            _overlayMpb.SetColor(FlashColorId, FlashWhite);
-            _overlayMpb.SetFloat(FlashAmountId, _flashAmount);
-            _overlayMpb.SetColor(FrostColorId, FrostCyan);
-            _overlayMpb.SetFloat(FrostAmountId, _frostAmount);
-            if (blockRenderer != null) blockRenderer.SetPropertyBlock(_overlayMpb);
-            if (mobRenderer != null) mobRenderer.SetPropertyBlock(_overlayMpb);
+            EnsureOverlayMaterials();
+            if (_blockMat != null)
+            {
+                _blockMat.SetFloat(FlashAmountId, _flashAmount);
+                _blockMat.SetFloat(FrostAmountId, _frostAmount);
+            }
+            if (_mobMat != null)
+            {
+                _mobMat.SetFloat(FlashAmountId, _flashAmount);
+                _mobMat.SetFloat(FrostAmountId, _frostAmount);
+            }
         }
 
         public override void OnInactive()
