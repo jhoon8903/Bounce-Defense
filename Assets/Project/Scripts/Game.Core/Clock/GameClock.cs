@@ -32,6 +32,7 @@ namespace Game.Core.Clock
 
         public GameClock()
         {
+            Application.targetFrameRate = 60;
             GameObject runnerObject = new GameObject("[GameClock]");
             _runner = runnerObject.AddComponent<ClockRunner>();
             _runner.Bind(this);

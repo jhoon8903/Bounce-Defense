@@ -146,7 +146,8 @@ namespace Game.Runtime.Bootstrap
         // 뷰는 씬 컴포넌트(RegisterComponent). 뷰/DB 미배선이면 드래프트 비활성(코어 루프는 그대로 동작).
         private void ConfigureRoguelike(IContainerBuilder builder, bool draftReady)
         {
-            builder.RegisterInstance(new SystemRandom(config.RngSeed)).As<IRandom>(); // 시드 결정론(§265 재현)
+            // 매 판 랜덤 시드(카드 첫 선택지·크리·드랍 등 전 게임 변주). 재현 영상/디버그가 필요하면 config.RngSeed로 고정.
+            builder.RegisterInstance(new SystemRandom(UnityEngine.Random.Range(1, int.MaxValue))).As<IRandom>();
             builder.Register<PlayerLoadout>(Lifetime.Singleton);
             builder.RegisterInstance(config.SkillDatabase != null ? config.SkillDatabase : ScriptableObject.CreateInstance<SkillDatabase>());
             builder.Register(resolver =>
