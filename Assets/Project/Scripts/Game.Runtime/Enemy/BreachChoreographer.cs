@@ -4,15 +4,12 @@ using UnityEngine;
 
 namespace Game.Runtime.Enemy
 {
-    // 적 방어선 침범 연출(스펙 #3): 끝 라인 도달 → 부들부들 떨림(~1s) → 캐릭터로 돌진(~0.32s) → 충격 콜백.
-    // EntranceChoreographer 미러: 명단(스폰/디스폰)은 EnemyController 소유, 여기는 연출 진행만.
-    // 완료 시 onImpact(id, damage, pos) 콜백 → 컨트롤러가 HP감소+플로팅텍스트+피+디스폰.
     public sealed class BreachChoreographer
     {
-        private const float TrembleDuration = 1.0f;  // 부들부들 시간
-        private const float LungeDuration = 0.32f;    // 캐릭터로 돌진 시간
-        private const float TrembleAmp = 0.09f;       // 떨림 진폭(월드 유닛, 몹 렌더러 로컬)
-        private const float TrembleFreq = 42f;        // 떨림 빈도
+        private const float TrembleDuration = 1.0f;
+        private const float LungeDuration = 0.32f;
+        private const float TrembleAmp = 0.09f;
+        private const float TrembleFreq = 42f;
 
         private sealed class Entry
         {
@@ -30,7 +27,6 @@ namespace Game.Runtime.Enemy
 
         public BreachChoreographer(Action<string, int, Vector2> onImpact) => _onImpact = onImpact;
 
-        // 침범 연출 시작. model은 이미 BeginBreaching(하강 제외) 상태로 넘어온다.
         public void Begin(string id, EnemyModel model, EnemyView view, int damage, Vector2 target)
         {
             if (model == null || view == null) return;
@@ -44,7 +40,7 @@ namespace Game.Runtime.Enemy
         public void Remove(string id)
         {
             if (_entries.TryGetValue(id, out Entry e) && e.View != null && ReferenceEquals(e.View.Model, e.Model))
-                e.View.SetRecoil(Vector2.zero); // 떨림 오프셋 원복(풀 재사용 대비)
+                e.View.SetRecoil(Vector2.zero);
             _entries.Remove(id);
         }
 
@@ -64,12 +60,15 @@ namespace Game.Runtime.Enemy
         {
             EnemyModel model = e.Model;
             EnemyView view = e.View;
-            if (view == null || !ReferenceEquals(view.Model, model)) { _entries.Remove(id); return; } // 유령(디스폰/풀 재발급)
+            if (view == null || !ReferenceEquals(view.Model, model))
+            {
+                _entries.Remove(id);
+                return;
+            }
 
             e.Elapsed += dt;
             if (e.Elapsed < TrembleDuration)
             {
-                // 부들부들: 몹 렌더러 로컬 지터(격자/콜라이더/모델 위치 불변).
                 float t = e.Elapsed;
                 float ox = Mathf.Sin(t * TrembleFreq) * TrembleAmp;
                 float oy = Mathf.Sin(t * TrembleFreq * 1.37f + 1.1f) * TrembleAmp * 0.6f;
@@ -80,14 +79,12 @@ namespace Game.Runtime.Enemy
             float lt = e.Elapsed - TrembleDuration;
             if (lt < LungeDuration)
             {
-                // 캐릭터로 돌진(ease-in 가속). 몹 오프셋 원복 후 전체가 날아감.
                 view.SetRecoil(Vector2.zero);
                 float k = Mathf.Clamp01(lt / LungeDuration);
                 model.SetPosition(Vector2.Lerp(e.Start, e.Target, k * k));
                 return;
             }
 
-            // 충격 → 콜백(HP감소+텍스트+피). EnemyController가 Despawn하며 여기서 Remove.
             _entries.Remove(id);
             _onImpact?.Invoke(id, e.Damage, e.Target);
         }

@@ -2,7 +2,6 @@ using UnityEngine;
 
 namespace Game.Runtime.Grid
 {
-    // BallConfig와 동일 방식으로 RegisterInstance 주입되는 그리드 치수 설정.
     [CreateAssetMenu(fileName = "GridConfig", menuName = "Game/Configs/GridConfig")]
     public sealed class GridConfig : ScriptableObject
     {

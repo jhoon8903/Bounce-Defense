@@ -17,7 +17,6 @@ public class CharView : MonoBehaviour
         }
     }
 
-    // 스태프 뷰(발사 마법진 재생용). 미배선 시 자식에서 탐색.
     public StaffView Staff
     {
         get

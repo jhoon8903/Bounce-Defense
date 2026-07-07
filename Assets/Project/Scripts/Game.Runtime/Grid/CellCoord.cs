@@ -1,6 +1,5 @@
 namespace Game.Runtime.Grid
 {
-    // 그리드 셀 주소(열/행). row 0 = 최상단. 값 동등성을 가진 순수 값 타입.
     public readonly struct CellCoord
     {
         public readonly int Col;

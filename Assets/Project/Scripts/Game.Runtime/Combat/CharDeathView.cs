@@ -3,16 +3,14 @@ using UnityEngine;
 
 namespace Game.Runtime.Combat
 {
-    // 캐릭터 사망 분리 연출(스펙 #4). HP 0 시 지팡이/몸통/머리 스프라이트가 각자 튕겨나가 회전·낙하·페이드.
-    // 게임 정지(GameSpeed=0) 중에 재생돼야 하므로 unscaled 시간. 완료 시 onDone → 실패 팝업 오픈 게이트.
     public sealed class CharDeathView : MonoBehaviour
     {
-        [SerializeField] private SpriteRenderer[] parts;   // Body, HeadView, StaffView
+        [SerializeField] private SpriteRenderer[] parts;
         [SerializeField] private float duration = 1.15f;
-        [SerializeField] private float popUpSpeed = 5.5f;   // 위로 튕기는 초기 속도
-        [SerializeField] private float spreadSpeed = 3.0f;  // 좌우로 벌어지는 속도
+        [SerializeField] private float popUpSpeed = 5.5f;
+        [SerializeField] private float spreadSpeed = 3.0f;
         [SerializeField] private float gravity = -20f;
-        [SerializeField] private float spinDeg = 320f;      // 초당 회전(부호는 좌우로)
+        [SerializeField] private float spinDeg = 320f;
 
         private struct Part { public Transform t; public SpriteRenderer sr; public Vector3 pos0; public Quaternion rot0; public Color col0; public Vector2 vel; public float angVel; }
         private Part[] _p;
@@ -24,7 +22,11 @@ namespace Game.Runtime.Combat
 
         public void Play(Action onDone)
         {
-            if (_playing || parts == null || parts.Length == 0) { onDone?.Invoke(); return; }
+            if (_playing || parts == null || parts.Length == 0)
+            {
+                onDone?.Invoke();
+                return;
+            }
             _onDone = onDone;
             _t = 0f;
             _p = new Part[parts.Length];
@@ -33,8 +35,7 @@ namespace Game.Runtime.Combat
             {
                 SpriteRenderer sr = parts[i];
                 Transform t = sr != null ? sr.transform : null;
-                // 파트별 초기 속도: 위로 팝 + 인덱스 기준 좌우 부채꼴(중앙0, 좌우로 벌어짐)
-                float side = n > 1 ? ((float)i / (n - 1)) * 2f - 1f : 0f; // -1..+1
+                float side = n > 1 ? ((float)i / (n - 1)) * 2f - 1f : 0f;
                 Vector2 vel = new Vector2(side * spreadSpeed, popUpSpeed);
                 _p[i] = new Part
                 {
@@ -49,7 +50,6 @@ namespace Game.Runtime.Combat
             _playing = true;
         }
 
-        // 재시작(씬 리로드 안 쓰는 경로) 대비 원위치 복구.
         public void ResetParts()
         {
             _playing = false;
@@ -76,7 +76,12 @@ namespace Game.Runtime.Combat
                 p.vel.y += gravity * dt;
                 p.t.localPosition += (Vector3)(p.vel * dt);
                 p.t.localRotation *= Quaternion.Euler(0f, 0f, p.angVel * dt);
-                if (p.sr != null) { Color c = p.col0; c.a = 1f - k; p.sr.color = c; }
+                if (p.sr != null)
+                {
+                    Color c = p.col0;
+                    c.a = 1f - k;
+                    p.sr.color = c;
+                }
                 _p[i] = p;
             }
             if (_t >= duration)

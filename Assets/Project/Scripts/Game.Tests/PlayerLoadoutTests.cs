@@ -38,7 +38,10 @@ namespace Game.Tests
         [Test]
         public void Acquire_RespectsActiveCap()
         {
-            for (int i = 0; i < 6; i++) lo.Acquire(SkillTestFactory.Skill("a" + i, SkillCategory.Active, 3));
+            for (int i = 0; i < 6; i++)
+            {
+                lo.Acquire(SkillTestFactory.Skill("a" + i, SkillCategory.Active, 3));
+            }
             Assert.AreEqual(PlayerLoadout.ActiveCap, lo.ActiveCount);
             Assert.IsTrue(lo.IsFull(SkillCategory.Active));
         }
@@ -46,7 +49,10 @@ namespace Game.Tests
         [Test]
         public void Acquire_RespectsPassiveCap()
         {
-            for (int i = 0; i < 4; i++) lo.Acquire(SkillTestFactory.Skill("p" + i, SkillCategory.Passive, 3));
+            for (int i = 0; i < 4; i++)
+            {
+                lo.Acquire(SkillTestFactory.Skill("p" + i, SkillCategory.Passive, 3));
+            }
             Assert.AreEqual(PlayerLoadout.PassiveCap, lo.PassiveCount);
             Assert.IsTrue(lo.IsFull(SkillCategory.Passive));
         }
@@ -62,7 +68,10 @@ namespace Game.Tests
         public void Upgrade_ClampsAtMaxLevel()
         {
             lo.Acquire(active);
-            for (int i = 0; i < 5; i++) lo.Upgrade(active);
+            for (int i = 0; i < 5; i++)
+            {
+                lo.Upgrade(active);
+            }
             Assert.AreEqual(active.MaxLevel, lo.LevelOf(active));
         }
 

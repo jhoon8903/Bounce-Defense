@@ -37,8 +37,16 @@ namespace Game.Runtime.Motor
                 t = Mathf.Min(tx, ty);
                 normal = (nx + ny).normalized;
             }
-            else if (tx < ty) { t = tx; normal = nx; }
-            else { t = ty; normal = ny; }
+            else if (tx < ty)
+            {
+                t = tx;
+                normal = nx;
+            }
+            else
+            {
+                t = ty;
+                normal = ny;
+            }
             return Mathf.Max(t, 0f);
         }
     }

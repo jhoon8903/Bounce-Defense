@@ -8,7 +8,6 @@ namespace Game.Runtime.Motor
         private const int MaxIterationsPerStep = 8;
         private const float SkinWidth = 0.01f;
         private const float MinRemaining = 0.0001f;
-        // 아레나는 축정렬 박스 → 바닥면 반사 노멀은 정확히 (0,+1). 옆면(±1,0)·천장(0,-1)과 이 값으로 명확히 구분된다.
         private const float FloorFaceNormalY = 0.5f;
         private Vector2 _position;
         private Vector2 _velocity;
@@ -20,13 +19,10 @@ namespace Game.Runtime.Motor
         private LayerMask _passThroughMask;
         private LayerMask _castMask;
         private readonly HashSet<Collider2D> _ignoredThisStep = new();
-        // 관통(Ghost) 볼이 이미 통과한 적 — 스텝을 넘어 지속 무시(관통 = 적당 1회 타격, 프레임마다 재히트=파파파팍 방지). Init에서 Clear.
         private readonly HashSet<Collider2D> _passedThrough = new();
-        // 이번 Step에서 맞은 적/블록 접촉(콜라이더+노멀, 재사용 버퍼, 할당 없음). Step 시작에 Clear.
         private readonly List<BallHit> _stepHits = new();
-        // CircleCast 결과 재사용 버퍼(NonAlloc 캐스트 — 매 스텝·매 이터레이션 배열 할당 제거). 소형 아레나라 16이면 충분.
         private readonly RaycastHit2D[] _castBuffer = new RaycastHit2D[16];
-        private ContactFilter2D _castFilter; // Init에서 레이어마스크+트리거 세팅(NonAlloc CircleCast용)
+        private ContactFilter2D _castFilter;
 
         public Vector2 Position => _position;
         public IReadOnlyList<BallHit> LastStepHits => _stepHits;
@@ -44,7 +40,7 @@ namespace Game.Runtime.Motor
             _passThroughMask = passThroughMask;
             _castMask = wallMask | enemyMask | blockMask;
             _castFilter = new ContactFilter2D { useTriggers = Physics2D.queriesHitTriggers, useLayerMask = true, layerMask = _castMask, useDepth = false };
-            _passedThrough.Clear(); // 볼 재사용 대비(관통 무시셋은 볼 수명 단위)
+            _passedThrough.Clear();
         }
 
         public BallMotorStepResult Step(float deltaTime)
@@ -93,8 +89,7 @@ namespace Game.Runtime.Motor
                     _velocity = Vector2.Reflect(_velocity, wallNormal).normalized * _speed;
                     _position += wallNormal * SkinWidth;
                     result.BounceCountThisStep++;
-                    result.WallBounceCountThisStep++; // 벽 반사(Magic Mirror 무장 신호)
-                    // 손실 없는 바닥 판정(순서 무관 sticky): 바닥면(노멀 +y) 반사가 한 번이라도 있으면 수집 대상.
+                    result.WallBounceCountThisStep++;
                     if (wallNormal.y >= FloorFaceNormalY) result.HitFloor = true;
                     continue;
                 }
@@ -106,10 +101,9 @@ namespace Game.Runtime.Motor
                 bool isPassThrough = (hitLayerBit & _passThroughMask.value) != 0;
                 if (isPassThrough)
                 {
-                    // 관통(Ghost): 반사 노멀이 없으므로 진입방향(-dir)을 접촉 노멀로 사용(전/후면 판정 일관).
                     AddDamageHit(hit.collider, -dir, hit.point);
                     _ignoredThisStep.Add(hit.collider);
-                    _passedThrough.Add(hit.collider); // 스텝 넘어 지속 무시 → 관통 볼은 적당 1회만 타격
+                    _passedThrough.Add(hit.collider);
                     continue;
                 }
                 _velocity = Vector2.Reflect(_velocity, hit.normal).normalized * _speed;
@@ -118,17 +112,17 @@ namespace Game.Runtime.Motor
                 if ((hitLayerBit & _wallMask.value) == 0) AddDamageHit(hit.collider, hit.normal, hit.point);
             }
             if (iterations < MaxIterationsPerStep || !(remaining > MinRemaining)) return result;
-            // 스텝 예산 소진(코너 끼임 등) → 다음 스텝에서 벗어나도록 속도를 살짝 회전.
             _velocity = Quaternion.Euler(0, 0, 1.5f) * _velocity;
             return result;
         }
 
-        // 이번 Step의 데미지 히트 기록(콜라이더+접촉면 노멀). 같은 콜라이더는 한 번만(1접촉=1히트, 첫 노멀 유지).
         private void AddDamageHit(Collider2D collider, Vector2 normal, Vector2 point)
         {
             if (collider == null) return;
             for (int i = 0; i < _stepHits.Count; i++)
+            {
                 if (_stepHits[i].Collider == collider) return;
+            }
             _stepHits.Add(new BallHit(collider, normal, point));
         }
     }

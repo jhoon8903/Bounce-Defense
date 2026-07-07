@@ -21,7 +21,7 @@ namespace Game.Roguelike
         public int XpToNext => _xpToNext;
         public float Progress => IsMaxLevel ? 1f : (_xpToNext > 0 ? (float)_xp / _xpToNext : 0f);
         public int PendingLevelUps => _pendingLevelUps;
-        public bool IsMaxLevel => _level >= _maxLevel; // 최대 레벨(모든 선택지 소진) → EXP 바 풀·레벨업 중단
+        public bool IsMaxLevel => _level >= _maxLevel;
         
         public event Action OnLevelUp;
 
@@ -39,7 +39,7 @@ namespace Game.Roguelike
 
         public void AddKill()
         {
-            if (IsMaxLevel) return; // 최대 레벨 도달 → XP·레벨업 중단(EXP 바 풀 유지)
+            if (IsMaxLevel) return;
             _xp += _xpPerKill;
             bool leveled = false;
             while (_xp >= _xpToNext && _level < _maxLevel)
@@ -50,7 +50,7 @@ namespace Game.Roguelike
                 _pendingLevelUps++;
                 leveled = true;
             }
-            if (IsMaxLevel) _xp = 0; // 최대 레벨: 잔여 XP 버리고 바 풀
+            if (IsMaxLevel) _xp = 0;
             Raise();
             if (leveled) OnLevelUp?.Invoke();
         }

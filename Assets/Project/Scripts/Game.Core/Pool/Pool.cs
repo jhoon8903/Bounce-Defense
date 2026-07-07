@@ -31,7 +31,7 @@ namespace Game.Core.Pool
                 defaultCapacity: _config.DefaultCapacity,
                 maxSize: _config.MaxCapacity
             );
-            Prewarm(_config.DefaultCapacity); // 사전 인스턴스화 → 게임플레이 Get가 Instantiate를 안 함(스폰/첫이펙트 버스트 프레임 블록 방지)
+            Prewarm(_config.DefaultCapacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,9 +61,6 @@ namespace Game.Core.Pool
             }
         }
 
-        // 풀 프리웜: count개를 미리 인스턴스화해 비활성으로 스택에 채운다(init 1회, _activeInstances엔 안 넣음).
-        // 게임플레이 Get가 Instantiate를 트리거하지 않아 스폰 버스트/첫 이펙트의 프레임 블록을 없앤다.
-        // 프리웜 인스턴스는 모델 바인딩 없이 OnGet/OnRelease만 도는데, 정상 Create도 Get(OnActive)→모델할당 순이라 무모델 OnActive는 이미 안전.
         public void Prewarm(int count)
         {
             if (count <= 0) return;
@@ -75,7 +72,10 @@ namespace Game.Core.Pool
                 if (inst == null) break;
                 buffer[n++] = inst;
             }
-            for (int i = 0; i < n; i++) _pool.Release(buffer[i]);
+            for (int i = 0; i < n; i++)
+            {
+                _pool.Release(buffer[i]);
+            }
         }
 
         public void Clear()

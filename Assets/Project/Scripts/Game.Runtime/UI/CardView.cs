@@ -7,25 +7,22 @@ using UnityEngine.UI;
 
 namespace Game.Runtime.UI
 {
-    // 카드 1장(스펙 §47). 실제 템플릿(ActiveCard/PassiveCard)에 맞춤:
-    //  이름 · 아이콘 · 한 줄 설명 · 레벨핍(1/2/3) · NEW 뱃지 · ★볼데미지(액티브: 현재→업그레이드).
-    //  클릭 → onPick. CardSelectView가 카테고리별로 이 컴포넌트가 붙은 템플릿을 복제해 사용.
     public sealed class CardView : MonoBehaviour
     {
-        [SerializeField] private Image iconImage;          // 헤더 스킬 아이콘
-        [SerializeField] private TMP_Text nameText;        // Inner/Name/SkillName
-        [SerializeField] private TMP_Text descriptionText; // Inner/Status/Desc
+        [SerializeField] private Image iconImage;
+        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private TMP_Text descriptionText;
 
         [Header("Damage (액티브 전용, 패시브는 미할당)")]
-        [SerializeField] private GameObject damageGroup;     // Inner/Status/StatusProperty
-        [SerializeField] private TMP_Text currentValueText;  // CurrentProperty (현재/신규 볼데미지)
-        [SerializeField] private GameObject upgradeMarker;   // UpgradeMarker (업그레이드 카드만)
-        [SerializeField] private TMP_Text upgradeValueText;  // UpgradeProperty (상승 후 볼데미지)
+        [SerializeField] private GameObject damageGroup;
+        [SerializeField] private TMP_Text currentValueText;
+        [SerializeField] private GameObject upgradeMarker;
+        [SerializeField] private TMP_Text upgradeValueText;
 
         [Header("State markers")]
-        [SerializeField] private GameObject newBadge;        // NewMarker (신규 카드만)
-        [SerializeField] private GameObject[] levelPips;     // SkillLevel/LevelN/LevelMarker, 채운 개수 = 제안 레벨
-        [SerializeField] private EventBtn selectButton;      // 카드 루트 EventBtn(throttle+전역락, 동시선택 차단)
+        [SerializeField] private GameObject newBadge;
+        [SerializeField] private GameObject[] levelPips;
+        [SerializeField] private EventBtn selectButton;
 
         private SkillCard _card;
         private Action<SkillCard> _onPick;
@@ -54,7 +51,6 @@ namespace Game.Runtime.UI
             SetPips(card.Level, def.MaxLevel);
         }
 
-        // 액티브: 신규면 현재값만, 업그레이드면 "현재→상승" 표시. 패시브: damageGroup 미할당 → 자동 생략.
         private void BindDamage(SkillCard card, SkillDefinition def)
         {
             if (damageGroup == null) return;
@@ -84,7 +80,9 @@ namespace Game.Runtime.UI
         {
             if (levelPips == null) return;
             for (int i = 0; i < levelPips.Length; i++)
+            {
                 if (levelPips[i] != null) levelPips[i].SetActive(i < level && i < maxLevel);
+            }
         }
 
         private void HandleClick() => _onPick?.Invoke(_card);

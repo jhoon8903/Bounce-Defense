@@ -5,17 +5,14 @@ using UnityEngine;
 
 namespace Game.Runtime.UI
 {
-    // 결과창(ClearView) 스킬별 데미지 목록 팝입기(가산점). Daniel이 만든 컨테이너 + 행 템플릿을 받아,
-    // DamageStats를 데미지 내림차순으로 채운다. 아이콘/이름은 SkillDatabase에서 EffectKind로 조회(수동 매핑 없음).
     public sealed class DTResultView : MonoBehaviour
     {
-        [SerializeField] private Transform rowContainer;      // 행 부모(VerticalLayoutGroup 권장)
-        [SerializeField] private DTResultRow rowTemplate;     // 행 템플릿(복제됨 — 비활성 권장)
+        [SerializeField] private Transform rowContainer;
+        [SerializeField] private DTResultRow rowTemplate;
 
         private readonly List<DTResultRow> _rows = new();
         private readonly List<KeyValuePair<SkillEffectKind, long>> _sorted = new();
 
-        // 결과 표시 시 호출(ClearView). 데미지 내림차순 행 생성. 아이콘/이름은 주입된 SkillDatabase에서 EffectKind로 조회(수동 매핑 없음).
         public void Populate(DamageStats stats, SkillDatabase db)
         {
             Clear();

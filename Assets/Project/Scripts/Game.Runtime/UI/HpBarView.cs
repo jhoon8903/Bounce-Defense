@@ -7,7 +7,7 @@ namespace Game.Runtime.UI
     public sealed class HpBarView : UiView<BaseModel>
     {
         [SerializeField] private Image fillImage;
-        [SerializeField] private NumberTextView hpNumber; // HP 숫자(카운트다운+팝, 제로 alloc)
+        [SerializeField] private NumberTextView hpNumber;
         [SerializeField] private float lerpSpeed = 3f;
 
         private static readonly Color High = new(0.30f, 0.85f, 0.35f);

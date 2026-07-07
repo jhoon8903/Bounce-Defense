@@ -6,8 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime.UI
 {
-    // 성공 팝업 연출(스펙 #2, UI는 Daniel). Shine 회전 + Head/Staff 흔들 + Star1/2/3 (0,0)→제자리 슬라이드(스태거) + 잔여HP 표기.
-    // Restart = 스테이지 재시작(씬 리로드). 애니메이션은 unscaled(GameSpeed 0 정지 중 동작).
     public sealed class ClearView : MonoBehaviour
     {
         [SerializeField] private CanvasGroup group;
@@ -19,7 +17,7 @@ namespace Game.Runtime.UI
         [SerializeField] private RectTransform star3;
         [SerializeField] private TMP_Text remainingText;
         [SerializeField] private EventBtn restartButton;
-        [SerializeField] private DTResultView dtResult; // 볼별 데미지 목록(자식). 미배선 시 GetComponentInChildren 폴백.
+        [SerializeField] private DTResultView dtResult;
         [SerializeField] private float fadeDuration = 0.35f;
         [SerializeField] private float shineSpeedDeg = 40f;
         [SerializeField] private float wobbleAmpDeg = 9f;
@@ -39,7 +37,10 @@ namespace Game.Runtime.UI
             if (staff != null) _staffBaseRot = staff.localRotation;
             _stars = new[] { star1, star2, star3 };
             _starTargets = new Vector2[_stars.Length];
-            for (int i = 0; i < _stars.Length; i++) if (_stars[i] != null) _starTargets[i] = _stars[i].anchoredPosition;
+            for (int i = 0; i < _stars.Length; i++)
+            {
+                if (_stars[i] != null) _starTargets[i] = _stars[i].anchoredPosition;
+            }
             if (restartButton != null) restartButton.Clicked += Restart;
             if (dtResult == null) dtResult = GetComponentInChildren<DTResultView>(true);
             HideImmediate();
@@ -49,17 +50,29 @@ namespace Game.Runtime.UI
         {
             if (_shown) return;
             _shown = true; _t = 0f;
-            if (group != null) { group.blocksRaycasts = true; group.interactable = true; }
-            for (int i = 0; i < _stars.Length; i++) if (_stars[i] != null) _stars[i].anchoredPosition = Vector2.zero; // 시작점=중앙
+            if (group != null)
+            {
+                group.blocksRaycasts = true;
+                group.interactable = true;
+            }
+            for (int i = 0; i < _stars.Length; i++)
+            {
+                if (_stars[i] != null) _stars[i].anchoredPosition = Vector2.zero;
+            }
             if (remainingText != null) remainingText.SetText("{0}%", Mathf.RoundToInt(Mathf.Clamp01(remainingPercent) * 100f));
-            if (dtResult != null) dtResult.Populate(stats, db); // 자식 DTResult에 스킬별 데미지 채움
+            if (dtResult != null) dtResult.Populate(stats, db);
             gameObject.SetActive(true);
         }
 
         public void HideImmediate()
         {
             _shown = false;
-            if (group != null) { group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false; }
+            if (group != null)
+            {
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+                group.interactable = false;
+            }
         }
 
         private void Update()

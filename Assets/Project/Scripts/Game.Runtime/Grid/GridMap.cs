@@ -3,18 +3,15 @@ using System.Collections.Generic;
 
 namespace Game.Runtime.Grid
 {
-    // 순수 점유 엔진 — UnityEngine 의존 없음(에디트모드 단위 테스트 가능).
-    // 셀당 int 핸들(0=빈칸). 멀티셀 블록은 같은 핸들을 겹치는 모든 셀에 기록 → 모든 겹치는 행/열 자동 포함.
-    // Unity 참조(IDamageable/Transform/Collider2D)는 절대 여기 들어오지 않는다(= GridController가 int->객체 브리지 소유).
     public sealed class GridMap
     {
         public const int Empty = 0;
 
         private readonly int _cols;
         private readonly int _rows;
-        private readonly int[] _cells;                              // row*Cols + col -> 핸들
-        private readonly Dictionary<int, List<int>> _cellsByHandle; // 핸들 -> 점유 셀 인덱스(제거 O(풋프린트))
-        private readonly Stack<List<int>> _listPool = new();        // 셀 버킷 재사용(핸들이 단조증가라 하강 재등록마다 new List 할당하던 것 제거)
+        private readonly int[] _cells;
+        private readonly Dictionary<int, List<int>> _cellsByHandle;
+        private readonly Stack<List<int>> _listPool = new();
 
         public int Cols => _cols;
         public int Rows => _rows;
@@ -29,13 +26,11 @@ namespace Game.Runtime.Grid
 
         private int Index(int col, int row) => row * _cols + col;
 
-        // 풋프린트가 보드 경계 안에 들어오는지(클램프 아님, 판정만).
         public bool FitsFootprint(CellCoord anchor, Footprint fp) =>
             anchor.Col >= 0 && anchor.Row >= 0 &&
             anchor.Col + fp.Width <= _cols &&
             anchor.Row + fp.Height <= _rows;
 
-        // 경계 안 + 모든 셀이 빈칸.
         public bool CanPlace(CellCoord anchor, Footprint fp)
         {
             if (!FitsFootprint(anchor, fp)) return false;
@@ -45,7 +40,6 @@ namespace Game.Runtime.Grid
             return true;
         }
 
-        // 경계 안 + 모든 셀이 빈칸이거나 ignoreHandle 소유. 하강 재등록에서 자기 자신과 겹치는 셀은 무시(핸들 churn 없이 점유 조회).
         public bool CanPlace(CellCoord anchor, Footprint fp, int ignoreHandle)
         {
             if (!FitsFootprint(anchor, fp)) return false;
@@ -58,7 +52,6 @@ namespace Game.Runtime.Grid
             return true;
         }
 
-        // 배치 성공 시 true. 경계 밖/겹침이면 아무것도 안 쓰고 false(리젝트, 클램프 없음).
         public bool Place(int handle, CellCoord anchor, Footprint fp)
         {
             if (handle == Empty) return false;

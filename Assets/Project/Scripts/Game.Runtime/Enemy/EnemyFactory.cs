@@ -4,7 +4,6 @@ using VContainer;
 
 namespace Game.Runtime.Enemy
 {
-    // BallFactory 대칭: pool.Get<EnemyView> + resolver.Inject + new EnemyModel 결합.
     public sealed class EnemyFactory : IEnemyFactory
     {
         private readonly IPool _pool;

@@ -18,7 +18,7 @@ namespace Game.Runtime.Combat
             if (trail == null) return;
             trail.material = _spriteRenderer.material;
             trail.Clear(); 
-            trail.emitting = true; // 위치 세팅 후 Clear → 풀 이전 위치서 줄 긋기 방지
+            trail.emitting = true;
         }
 
         protected override void OnModelUnbound(BallModel model)

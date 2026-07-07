@@ -7,9 +7,6 @@ using UnityEngine;
 
 namespace Game.EditorTools
 {
-    // Scene View 웨이브 배치 에디터. 스테이지/웨이브 선택 → 적 팔레트에서 브러시 고름 →
-    // Scene View 그리드에 셀 클릭으로 몹 배치(멀티셀 풋프린트·겹침/경계 방지) → WaveDefinition SO에 저장(Undo).
-    //  · 좌클릭 빈 셀: 브러시 배치   · 좌/우클릭 점유 셀: 제거   · 원점 = 씬 'Grid' 오브젝트(없으면 GridConfig.OriginFallback)
     public sealed class WaveEditorWindow : EditorWindow
     {
         private StageDefinition _stage;
@@ -17,7 +14,7 @@ namespace Game.EditorTools
         private int _waveIndex;
         private GridConfig _gridConfig;
         private EnemyDefinition _brush;
-        private int _group; // 현재 오써링 중인 서브웨이브 그룹(0=1-1, 1=1-2 …)
+        private int _group;
         private bool _editInScene = true;
         private Vector2 _paletteScroll;
         private readonly List<EnemyDefinition> _enemyDefs = new();
@@ -34,7 +31,6 @@ namespace Game.EditorTools
 
         private void OnDisable() => SceneView.duringSceneGui -= OnSceneGui;
 
-        // ---------- Inspector 패널 ----------
         private void OnGUI()
         {
             EditorGUILayout.LabelField("Wave Editor", EditorStyles.boldLabel);
@@ -79,7 +75,7 @@ namespace Game.EditorTools
                 bool selected = _brush == def;
                 GUI.backgroundColor = selected ? new Color(0.4f, 0.8f, 1f) : Color.white;
                 if (GUILayout.Button($"{def.DisplayName}  [{def.Footprint.Width}x{def.Footprint.Height}]  HP {def.BaseHp}"))
-                    _brush = selected ? null : def; // 다시 누르면 해제
+                    _brush = selected ? null : def;
             }
             GUI.backgroundColor = Color.white;
             EditorGUILayout.EndScrollView();
@@ -103,14 +99,12 @@ namespace Game.EditorTools
             }
         }
 
-        // ---------- Scene View 드로잉 + 배치 ----------
         private void OnSceneGui(SceneView sv)
         {
             if (!_editInScene || _wave == null) return;
             GridGeometry geo = Geometry();
             Event e = Event.current;
 
-            // 씬 오브젝트 선택/디셀렉트 방지 — 우리 컨트롤이 기본 핸들을 먹는다.
             int controlId = GUIUtility.GetControlID(FocusType.Passive);
             if (e.type == EventType.Layout) HandleUtility.AddDefaultControl(controlId);
 
@@ -118,8 +112,11 @@ namespace Game.EditorTools
             List<WaveDefinition.Placement> list = ReadPlacements();
             DrawPlacements(geo, list);
 
-            // 마우스 → 셀
-            if (!TryMouseCell(e, geo, out CellCoord cell)) { sv.Repaint(); return; }
+            if (!TryMouseCell(e, geo, out CellCoord cell))
+            {
+                sv.Repaint();
+                return;
+            }
 
             Footprint fp = _brush != null ? _brush.Footprint : Footprint.Size1x1;
             int hit = FindPlacementCovering(list, cell, _group);
@@ -127,7 +124,6 @@ namespace Game.EditorTools
                             geo.InBounds(cell.Col + fp.Width - 1, cell.Row + fp.Height - 1);
             bool overlaps = Overlaps(list, cell, fp, -1, _group);
 
-            // 브러시 프리뷰(브러시 있고 빈 셀 위): 유효=초록, 무효=빨강
             if (_brush != null && hit < 0)
             {
                 Color col = (inBounds && !overlaps) ? new Color(0.3f, 1f, 0.3f, 0.35f) : new Color(1f, 0.3f, 0.3f, 0.35f);
@@ -135,17 +131,14 @@ namespace Game.EditorTools
             }
             else if (hit >= 0)
             {
-                // 제거 대상 강조
                 WaveDefinition.Placement p = list[hit];
                 DrawFootprint(geo, new CellCoord(p.col, p.row), PlacementFootprint(p), new Color(1f, 0.6f, 0.1f, 0.35f), Color.yellow);
             }
 
-            // 클릭 처리
             if (e.type == EventType.MouseDown && (e.button == 0 || e.button == 1))
             {
                 if (e.button == 1 || hit >= 0)
                 {
-                    // 우클릭 or 점유 셀 클릭 → 제거
                     if (hit >= 0)
                     {
                         Undo.RecordObject(_wave, "Erase Placement");
@@ -155,19 +148,17 @@ namespace Game.EditorTools
                 }
                 else if (_brush != null && inBounds && !overlaps)
                 {
-                    // 좌클릭 빈 셀 + 유효 → 배치
                     Undo.RecordObject(_wave, "Add Placement");
                     list.Add(new WaveDefinition.Placement { enemy = _brush, col = cell.Col, row = cell.Row, group = _group });
                     WritePlacements(list);
                 }
                 e.Use();
-                Repaint(); // 인스펙터 배치 수 갱신
+                Repaint();
             }
 
             sv.Repaint();
         }
 
-        // ---------- 드로잉 ----------
         private static void DrawGrid(GridGeometry geo)
         {
             Handles.color = new Color(1f, 1f, 1f, 0.15f);
@@ -217,14 +208,13 @@ namespace Game.EditorTools
             Handles.DrawSolidRectangleWithOutline(v, face, outline);
         }
 
-        // ---------- 데이터/기하 헬퍼 ----------
         private GridGeometry Geometry()
         {
             int cols = _gridConfig != null ? _gridConfig.Cols : 9;
             int rows = _gridConfig != null ? _gridConfig.Rows : 13;
             float cell = _gridConfig != null ? _gridConfig.CellSize : 1f;
             Vector2 origin = _gridConfig != null ? _gridConfig.OriginFallback : new Vector2(0f, 1.27f);
-            GameObject gridGo = GameObject.Find("Grid"); // 씬 앵커 우선(런타임 원점과 일치)
+            GameObject gridGo = GameObject.Find("Grid");
             if (gridGo != null) origin = gridGo.transform.position;
             return new GridGeometry(cols, rows, cell, origin);
         }
@@ -234,7 +224,7 @@ namespace Game.EditorTools
             cell = default;
             Ray r = HandleUtility.GUIPointToWorldRay(e.mousePosition);
             if (Mathf.Abs(r.direction.z) < 1e-6f) return false;
-            float t = -r.origin.z / r.direction.z; // z=0 평면 교차(2D)
+            float t = -r.origin.z / r.direction.z;
             Vector3 world = r.origin + r.direction * t;
             cell = geo.WorldToCell(world);
             return true;
@@ -243,7 +233,6 @@ namespace Game.EditorTools
         private static Footprint PlacementFootprint(WaveDefinition.Placement p) =>
             p.enemy != null ? p.enemy.Footprint : Footprint.Size1x1;
 
-        // cell을 풋프린트가 덮는 (현재 그룹) 배치 인덱스(없으면 -1).
         private static int FindPlacementCovering(List<WaveDefinition.Placement> list, CellCoord cell, int group)
         {
             for (int i = 0; i < list.Count; i++)
@@ -258,7 +247,6 @@ namespace Game.EditorTools
             return -1;
         }
 
-        // anchor+fp가 같은 그룹 기존 배치(ignoreIndex 제외)와 겹치는가. 다른 그룹은 순차 스폰이라 겹침 허용.
         private static bool Overlaps(List<WaveDefinition.Placement> list, CellCoord anchor, Footprint fp, int ignoreIndex, int group)
         {
             for (int i = 0; i < list.Count; i++)

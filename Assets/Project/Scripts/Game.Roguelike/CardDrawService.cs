@@ -30,7 +30,10 @@ namespace Game.Roguelike
             _random.Shuffle(_candidates);
             int n = count < _candidates.Count ? count : _candidates.Count;
             List<SkillCard> result = new List<SkillCard>(n);
-            for (int i = 0; i < n; i++) result.Add(_candidates[i]);
+            for (int i = 0; i < n; i++)
+            {
+                result.Add(_candidates[i]);
+            }
             return result;
         }
 

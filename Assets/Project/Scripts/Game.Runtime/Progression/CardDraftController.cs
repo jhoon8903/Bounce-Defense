@@ -6,12 +6,6 @@ using Game.Runtime.UI;
 
 namespace Game.Runtime.Progression
 {
-    // 킬 기반 XP 카드 드래프트 오케스트레이터(Phase 3, 결정 B, 스펙 §3).
-    //  - CombatEventHub.OnKill → LevelModel.AddKill.
-    //  - LevelModel.OnLevelUp → 전투 일시정지(IClock.GameSpeed=0) → CardDrawService.Draw(3) → CardSelectView.Show.
-    //  - 카드 선택 → PlayerLoadout.Apply → 대기 레벨업 있으면 연속 드래프트, 없으면 재개(GameSpeed=1).
-    //  - <3 유효 카드는 있는 만큼, 0장이면 스킵(레벨업만 소비하고 재개, §261).
-    // 뷰 참조를 소유(DI RegisterComponent)하되 뷰는 순수 표현 — 흐름/일시정지/규칙은 전부 여기.
     public sealed class CardDraftController : BaseController
     {
         private const int DrawCount = 3;
@@ -56,7 +50,6 @@ namespace Game.Runtime.Progression
             _level.OnLevelUp -= OnLevelUp;
         }
 
-        // 재시작(§264): 드래프트 강제 종료 + 스킬 0 + 레벨 1 + 재개. (현재 라이브 재시작 트리거는 미배선 — Phase 5)
         protected override void OnReset()
         {
             _drafting = false;
@@ -73,11 +66,10 @@ namespace Game.Runtime.Progression
 
         private void OnLevelUp()
         {
-            if (_drafting) return; // 드래프트 중이면 대기 큐가 픽 후 처리
+            if (_drafting) return;
             ProcessNextDraft();
         }
 
-        // 대기 레벨업을 하나씩 소비하며 드래프트. 유효 카드 0이면 스킵, 더 없으면 재개.
         private void ProcessNextDraft()
         {
             while (_level.TryConsumeLevelUp())
@@ -86,11 +78,10 @@ namespace Game.Runtime.Progression
                 if (cards.Count > 0)
                 {
                     _drafting = true;
-                    _clock.GameSpeed = 0f; // 일시정지(볼·적 하강 모두 GameDeltaTime 기반이라 정지)
+                    _clock.GameSpeed = 0f;
                     _cardView.Show(cards, OnCardPicked);
                     return;
                 }
-                // 0장 → 스킵하고 다음 대기 레벨업 처리
             }
             EndDraft();
         }
@@ -100,13 +91,13 @@ namespace Game.Runtime.Progression
             _loadout.Apply(card);
             _drafting = false;
             _cardView.Hide();
-            ProcessNextDraft(); // 다음 대기 레벨업 or 재개
+            ProcessNextDraft();
         }
 
         private void EndDraft()
         {
             _drafting = false;
-            _clock.GameSpeed = 1f; // 재개
+            _clock.GameSpeed = 1f;
             _cardView?.Hide();
         }
     }

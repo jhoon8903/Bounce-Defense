@@ -48,17 +48,17 @@ namespace Game.Tests
         [Test]
         public void OwnedSkill_OffersUpgradeNotNew()
         {
-            loadout.Acquire(a1); // L1
+            loadout.Acquire(a1);
             SkillCard card = Of(draw.Draw(100), a1);
             Assert.IsTrue(card.IsValid);
             Assert.IsFalse(card.IsNew);
-            Assert.AreEqual(2, card.Level); // owned+1
+            Assert.AreEqual(2, card.Level);
         }
 
         [Test]
         public void MaxedSkill_Excluded()
         {
-            loadout.Acquire(a1); loadout.Upgrade(a1); loadout.Upgrade(a1); // L3 = max
+            loadout.Acquire(a1); loadout.Upgrade(a1); loadout.Upgrade(a1);
             Assert.IsFalse(Has(draw.Draw(100), a1));
         }
 
@@ -74,7 +74,7 @@ namespace Game.Tests
         [Test]
         public void ActiveCapReached_NoNewActive_UpgradesAndPassivesOnly()
         {
-            loadout.Acquire(a1); loadout.Acquire(a2); loadout.Acquire(a3); loadout.Acquire(a4); // 4 = cap
+            loadout.Acquire(a1); loadout.Acquire(a2); loadout.Acquire(a3); loadout.Acquire(a4);
             List<SkillCard> all = draw.Draw(100);
             Assert.IsFalse(Has(all, a5), "capped: unowned 5th active must not appear");
             Assert.IsTrue(Has(all, a1) && !Of(all, a1).IsNew, "owned active offered as upgrade");
@@ -123,7 +123,10 @@ namespace Game.Tests
             List<SkillCard> r1 = d1.Draw(3);
             List<SkillCard> r2 = d2.Draw(3);
             Assert.AreEqual(r1.Count, r2.Count);
-            for (int i = 0; i < r1.Count; i++) Assert.AreEqual(r1[i].Definition, r2[i].Definition);
+            for (int i = 0; i < r1.Count; i++)
+            {
+                Assert.AreEqual(r1[i].Definition, r2[i].Definition);
+            }
         }
     }
 }

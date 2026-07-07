@@ -3,8 +3,6 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime.UI
 {
-    // 실패 팝업 연출(스펙 #1, UI는 Daniel). Head 흔들흔들 + 달그락(위치 지터) + 페이드 인.
-    // Revive = 스테이지 재시작(씬 리로드). 애니메이션은 unscaled(GameSpeed 0 정지 중 동작).
     public sealed class DefeatedView : MonoBehaviour
     {
         [SerializeField] private CanvasGroup group;
@@ -13,7 +11,7 @@ namespace Game.Runtime.UI
         [SerializeField] private float fadeDuration = 0.35f;
         [SerializeField] private float wobbleAmpDeg = 12f;
         [SerializeField] private float wobbleFreq = 9f;
-        [SerializeField] private float rattleAmp = 3f;   // 달그락 위치 지터(px)
+        [SerializeField] private float rattleAmp = 3f;
 
         private bool _shown;
         private float _t;
@@ -22,7 +20,11 @@ namespace Game.Runtime.UI
 
         private void Awake()
         {
-            if (head != null) { _headBasePos = head.anchoredPosition; _headBaseRot = head.localRotation; }
+            if (head != null)
+            {
+                _headBasePos = head.anchoredPosition;
+                _headBaseRot = head.localRotation;
+            }
             if (reviveButton != null) reviveButton.Clicked += Restart;
             HideImmediate();
         }
@@ -31,14 +33,23 @@ namespace Game.Runtime.UI
         {
             if (_shown) return;
             _shown = true; _t = 0f;
-            if (group != null) { group.blocksRaycasts = true; group.interactable = true; }
+            if (group != null)
+            {
+                group.blocksRaycasts = true;
+                group.interactable = true;
+            }
             gameObject.SetActive(true);
         }
 
         public void HideImmediate()
         {
             _shown = false;
-            if (group != null) { group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false; }
+            if (group != null)
+            {
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+                group.interactable = false;
+            }
         }
 
         private void Update()

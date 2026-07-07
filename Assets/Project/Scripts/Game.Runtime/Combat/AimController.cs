@@ -6,8 +6,6 @@ using VContainer;
 
 namespace Game.Runtime.Combat
 {
-    // 조준 입력 전담: 포인터 → 조준 방향(각도 클램프) → LaunchController에 위임(발사 시작/조준/정지).
-    // 캐릭터 비주얼(플립·앵커 회전)은 CharController(IClock 틱), 궤적은 TrajectoryPreview가 LaunchController.CurrentDirection을 읽어 처리.
     public sealed class AimController : MonoBehaviour
     {
         [SerializeField] private LaunchController launchController;
@@ -32,7 +30,6 @@ namespace Game.Runtime.Combat
             Pointer pointer = Pointer.current;
             if (pointer == null || launchController == null) return;
             if (!pointer.press.isPressed) return;
-            // 일시정지(드래프트/결과 팝업, GameSpeed 0) 또는 UI 위 터치(카드 클릭 등)는 조준/발사 아님.
             if ((_clock != null && _clock.GameSpeed <= 0f) || IsPointerOverUI()) return;
 
             Vector2 dir = ComputeClampedDirection(pointer.position.ReadValue(), launchController.Origin);
@@ -64,14 +61,12 @@ namespace Game.Runtime.Combat
             return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
         }
 
-        // +x축 기준 각도를 [minDeg,maxDeg] 상단 아크로 클램프. 아크 밖(아래쪽)은 "가장 가까운 경계"로 붙여
-        // 반대편으로 튀는 문제 방지. rawSignedAngle = Vector2.SignedAngle(right, dir) ∈ [-180,180].
         public static float ClampAimAngle(float rawSignedAngle, float minDeg, float maxDeg)
         {
             float a = rawSignedAngle;
-            if (a < 0f) a += 360f;                    // [0,360)
-            if (a >= minDeg && a <= maxDeg) return a; // 아크 안이면 그대로
-            float mid = (minDeg + maxDeg) * 0.5f + 180f; // 금지 아크(아래쪽)의 중점
+            if (a < 0f) a += 360f;
+            if (a >= minDeg && a <= maxDeg) return a;
+            float mid = (minDeg + maxDeg) * 0.5f + 180f;
             return (a > maxDeg && a < mid) ? maxDeg : minDeg;
         }
     }

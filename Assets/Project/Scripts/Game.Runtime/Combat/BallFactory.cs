@@ -6,10 +6,6 @@ using VContainer;
 
 namespace Game.Runtime.Combat
 {
-    // 볼 타입별 풀 소유(§11-9 결정: BallFactory가 타입별 Pool<BallView> 소유).
-    //  - 각 BallConfig(=타입별 프리팹) 하나당 Pool<BallView> 하나(타입으로 키). 스폰 시 spec 타입의 풀에서 그 프리팹을 꺼낸다.
-    //  - GamePool은 View 타입으로 풀을 나눠 6개 BallView 프리팹이 한 풀로 충돌 → 여기서 config별로 분리(Game.Core 풀 무수정).
-    //  - Pool<T>(Game.Core 템플릿)를 그대로 재사용 — config.Prefab을 인스턴스화/재활용.
     public sealed class BallFactory : IBallFactory
     {
         private readonly IObjectResolver _resolver;
@@ -31,10 +27,13 @@ namespace Game.Runtime.Combat
                     GameObject parentGo = new GameObject($"[Pool] {c.PoolName}");
                     if (poolRoot != null) parentGo.transform.SetParent(poolRoot);
                     _pools[c.SourceType] = new Pool<BallView>(c, parentGo.transform);
-                    if (!any) { first = c.SourceType; any = true; }
+                    if (!any)
+                    {
+                        first = c.SourceType;
+                        any = true;
+                    }
                 }
             }
-            // 폴백: Normal 풀 있으면 Normal, 없으면 처음 등록된 타입(스킬볼 config 미배선 시 코어 루프 보존).
             _fallbackType = _pools.ContainsKey(BallSourceType.Normal) ? BallSourceType.Normal : first;
         }
 

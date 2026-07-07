@@ -5,12 +5,10 @@ using UnityEngine;
 
 namespace Game.Runtime.UI
 {
-    // 보유 스킬 로드아웃(SkillMonitor, 스펙 §47 Active4/Passive2). PlayerLoadout 구독.
-    // 슬롯은 SkillSlotView 배열(직접 ref) — 런타임 Find 없음. 획득 순서대로 채우고 남는 칸은 비움.
     public sealed class SkillLoadoutView : UiView<PlayerLoadout>
     {
-        [SerializeField] private SkillSlotView[] activeSlots;   // Slot0..3
-        [SerializeField] private SkillSlotView[] passiveSlots;  // Slot1..2
+        [SerializeField] private SkillSlotView[] activeSlots;
+        [SerializeField] private SkillSlotView[] passiveSlots;
 
         private readonly List<KeyValuePair<SkillDefinition, int>> _buffer = new();
 

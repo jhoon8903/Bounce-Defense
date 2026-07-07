@@ -4,8 +4,6 @@ using Game.Skills;
 
 namespace Game.Runtime.Skills
 {
-    // Fire Ball 볼 모듈: 직격 시 대상에 번(초당 틱) 부여. 번 데미지 자체는 EnemyStatusSimulator가 틱(flat·무크리·무버프).
-    // 레벨별 수치(지속·dps·최대중첩, 플랜 §198)는 SkillDefinition(§11-17 결정: 인스펙터 튜닝)에서 읽는다.
     public sealed class FireBallModule : IBallModule
     {
         private readonly float _duration;

@@ -2,7 +2,6 @@ using UnityEngine;
 
 namespace Game.Combat
 {
-    // struct(값 타입): 매 적중 힙할당 제거(핫패스 GC). DamageResolver.Resolve는 ref로 받아 IsCrit/FinalDamage를 호출부 복사에 기록.
     public struct HitContext
     {
         public IDamageable Target;
@@ -11,8 +10,8 @@ namespace Game.Combat
         public float BaseDamage;
         public bool CanCrit;
         public bool CanReceiveGlobalModifiers;
-        public Vector2 HitNormal; // 전/후면 크리 판정용(단검 패시브). 미사용 시 default.
-        public int SourceBallId;  // "같은 볼" 판정(Magic Mirror 등). 미지정 0.
+        public Vector2 HitNormal;
+        public int SourceBallId;
         public float BonusAdditivePercent;
         public bool IsCrit;
         public int FinalDamage;

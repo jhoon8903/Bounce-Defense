@@ -4,8 +4,6 @@ using UnityEngine;
 
 namespace Game.Runtime.Motor
 {
-    // 궤적 미리보기 = 둥근 dot 점선, 항상 표시. 단일 프로시저 메시(1 드로우콜) — 점당 GameObject 인스턴스 없음.
-    // 원형 텍스처 quad를 dotSpacing 간격으로 배치. 월드 코너를 InverseTransformPoint로 로컬화 → Char 플립(scale.x=-1) 무관.
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public sealed class TrajectoryPreview : MonoBehaviour
     {
@@ -14,7 +12,7 @@ namespace Game.Runtime.Motor
 
         [Header("Simulation")]
         [SerializeField] private float radius = 0.15f;
-        [SerializeField] private int previewBounces = 2;        // 첫 반사 세그먼트(꺾임 1개)까지
+        [SerializeField] private int previewBounces = 2;
         [SerializeField] private float maxPreviewDistance = 40f;
         [SerializeField] private LayerMask wallMask;
         [SerializeField] private LayerMask enemyMask;
@@ -35,8 +33,8 @@ namespace Game.Runtime.Motor
         private readonly List<Vector2> _uvs = new();
         private readonly List<int> _tris = new();
         private readonly List<Color> _cols = new();
-        private readonly RaycastHit2D[] _castBuffer = new RaycastHit2D[16]; // NonAlloc 캐스트 재사용 버퍼(LateUpdate 매 프레임 배열 할당 제거)
-        private ContactFilter2D _castFilter; // Awake에서 레이어마스크+트리거 세팅
+        private readonly RaycastHit2D[] _castBuffer = new RaycastHit2D[16];
+        private ContactFilter2D _castFilter;
 
         private void Awake()
         {
@@ -62,7 +60,11 @@ namespace Game.Runtime.Motor
 
         private void LateUpdate()
         {
-            if (launchController == null) { _mesh.Clear(); return; }
+            if (launchController == null)
+            {
+                _mesh.Clear();
+                return;
+            }
             Simulate(launchController.Origin, launchController.CurrentDirection, _path);
             BuildDotMesh(_path);
         }
@@ -74,7 +76,6 @@ namespace Game.Runtime.Motor
             {
                 float half = dotSize * 0.5f;
                 int count = 0;
-                // 폴리라인을 dotSpacing 간격으로 리샘플 → 각 점에 quad.
                 AddDot(path[0], half, ref count);
                 float sinceLast = 0f;
                 for (int seg = 0; seg < path.Count - 1 && count < maxDots; seg++)
@@ -104,7 +105,6 @@ namespace Game.Runtime.Motor
         private void AddDot(Vector2 worldCenter, float half, ref int count)
         {
             int b = _verts.Count;
-            // 월드 코너 → 로컬(플립 보정). 스프라이트 셰이더는 Cull Off라 와인딩 무관.
             _verts.Add(transform.InverseTransformPoint(new Vector3(worldCenter.x - half, worldCenter.y - half, 0f)));
             _verts.Add(transform.InverseTransformPoint(new Vector3(worldCenter.x + half, worldCenter.y - half, 0f)));
             _verts.Add(transform.InverseTransformPoint(new Vector3(worldCenter.x + half, worldCenter.y + half, 0f)));
@@ -134,7 +134,6 @@ namespace Game.Runtime.Motor
             return tex;
         }
 
-        // 벽/장애물 반사 궤적 시뮬(모터와 동일 규칙). previewBounces 회 반사까지 점 리스트.
         private void Simulate(Vector2 origin, Vector2 direction, List<Vector2> points)
         {
             points.Clear();

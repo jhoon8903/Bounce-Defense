@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 namespace Game.Core.Random
 {
-    // 시드 결정론 RNG(플랜 §265). EditMode 테스트·재현 영상용. 크리/냉동/클러스터/셔플 단일 소스.
     public sealed class SystemRandom : IRandom
     {
         private readonly System.Random _random;

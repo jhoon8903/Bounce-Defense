@@ -7,7 +7,7 @@ namespace Game.Runtime.Combat
     [DisallowMultipleComponent]
     public sealed class ImpactVfxView : PoolableView
     {
-        [SerializeField] private float lifetime = 0.7f; // 풀 반환까지 수명(초) — 파티클 지속보다 약간 길게.
+        [SerializeField] private float lifetime = 0.7f;
 
         private ParticleSystem[] _roots;
         private float _elapsed;
@@ -39,8 +39,6 @@ namespace Game.Runtime.Combat
             return false;
         }
 
-        // 스폰 직후 컨트롤러가 호출. 위치만 세팅 + 최상위 파티클 전부 리셋 후 재생.
-        // 크기는 프리팹 자체(transform scale + PS 내부)에서만 정함 — 코드가 transform scale을 건드리지 않는다(Daniel 규칙: 스케일은 왜곡, 내부로).
         public void Play(Vector3 worldPos)
         {
             transform.position = worldPos;
@@ -56,7 +54,6 @@ namespace Game.Runtime.Combat
             }
         }
 
-        // 컨트롤러가 매 틱 GameDeltaTime을 넘겨 호출. false 반환 시 컨트롤러가 풀 반환.
         public bool Tick(float dt)
         {
             if (!_alive || dt <= 0f) return _alive;
@@ -66,7 +63,6 @@ namespace Game.Runtime.Combat
             return false;
         }
 
-        // 풀 반환 시 클린 리셋 — 재사용 인스턴스가 이전 파티클을 이어 그리지 않게.
         public override void OnInactive()
         {
             base.OnInactive();

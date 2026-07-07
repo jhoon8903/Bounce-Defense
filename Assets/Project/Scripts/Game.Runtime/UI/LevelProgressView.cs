@@ -7,10 +7,10 @@ namespace Game.Runtime.UI
     public sealed class LevelProgressView : UiView<LevelModel>
     {
         [SerializeField] private Slider slider;
-        [SerializeField] private NumberTextView levelNumber; // 레벨 숫자(카운트업+팝, 제로 alloc)
+        [SerializeField] private NumberTextView levelNumber;
         [SerializeField] private CanvasGroup levelUpFlash;
         [SerializeField] private float flashDuration = 1.0f;
-        [SerializeField] private float sliderLerpSpeed = 3f; // EXP 바 러프 속도
+        [SerializeField] private float sliderLerpSpeed = 3f;
 
         private int _lastLevel = 1;
         private float _flashTimer;
@@ -21,10 +21,15 @@ namespace Game.Runtime.UI
         {
             LevelModel m = Model;
             if (m == null) return;
-            if (slider != null) { slider.minValue = 0f; slider.maxValue = 1f; _sliderTarget = m.Progress; }
+            if (slider != null)
+            {
+                slider.minValue = 0f;
+                slider.maxValue = 1f;
+                _sliderTarget = m.Progress;
+            }
             if (levelNumber != null) levelNumber.SetValue(m.Level);
-            if (m.Level > _lastLevel) TriggerFlash();      // 레벨업 → 플래시
-            _lastLevel = m.Level;                          // 리셋(레벨 하강)도 동기화
+            if (m.Level > _lastLevel) TriggerFlash();
+            _lastLevel = m.Level;
         }
 
         private void TriggerFlash()
@@ -36,7 +41,6 @@ namespace Game.Runtime.UI
 
         private void Update()
         {
-            // EXP 바 러프(증가/감소 모두 부드럽게).
             if (slider != null && !Mathf.Approximately(_sliderDisplay, _sliderTarget))
             {
                 _sliderDisplay = Mathf.MoveTowards(_sliderDisplay, _sliderTarget, Time.unscaledDeltaTime * sliderLerpSpeed);

@@ -60,7 +60,6 @@ namespace Game.Roguelike
             }
         }
 
-        // 재시작(§264): 스킬 0으로.
         public void ResetLoadout()
         {
             _levels.Clear();

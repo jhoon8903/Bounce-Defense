@@ -18,7 +18,10 @@ namespace Game.Tests
             {
                 SerializedProperty arr = s.FindProperty("ballDamagePerLevel");
                 arr.arraySize = ballDamage.Length;
-                for (int i = 0; i < ballDamage.Length; i++) arr.GetArrayElementAtIndex(i).intValue = ballDamage[i];
+                for (int i = 0; i < ballDamage.Length; i++)
+                {
+                    arr.GetArrayElementAtIndex(i).intValue = ballDamage[i];
+                }
             }
             s.ApplyModifiedPropertiesWithoutUndo();
             return so;
@@ -30,10 +33,16 @@ namespace Game.Tests
             SerializedObject s = new SerializedObject(db);
             SerializedProperty a = s.FindProperty("activeSkills");
             a.arraySize = actives.Length;
-            for (int i = 0; i < actives.Length; i++) a.GetArrayElementAtIndex(i).objectReferenceValue = actives[i];
+            for (int i = 0; i < actives.Length; i++)
+            {
+                a.GetArrayElementAtIndex(i).objectReferenceValue = actives[i];
+            }
             SerializedProperty p = s.FindProperty("passiveSkills");
             p.arraySize = passives.Length;
-            for (int i = 0; i < passives.Length; i++) p.GetArrayElementAtIndex(i).objectReferenceValue = passives[i];
+            for (int i = 0; i < passives.Length; i++)
+            {
+                p.GetArrayElementAtIndex(i).objectReferenceValue = passives[i];
+            }
             s.ApplyModifiedPropertiesWithoutUndo();
             return db;
         }

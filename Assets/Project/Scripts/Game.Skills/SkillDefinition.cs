@@ -19,12 +19,12 @@ namespace Game.Skills
         [SerializeField] private int[] ballDamagePerLevel = Array.Empty<int>();
 
         [Header("Effect params (자기 효과 섹션만 채움)")]
-        [SerializeField] private BurnEffect burn = new();       // FireBall
-        [SerializeField] private FreezeEffect freeze = new(); // IceBall
-        [SerializeField] private LaserEffect laser = new();     // LaserBall
-        [SerializeField] private ClusterEffect cluster = new(); // ClusterBall
-        [SerializeField] private MirrorEffect mirror = new();     // MagicMirror(패시브)
-        [SerializeField] private LastMatchEffect lastMatch = new(); // LastMatch(패시브)
+        [SerializeField] private BurnEffect burn = new();
+        [SerializeField] private FreezeEffect freeze = new();
+        [SerializeField] private LaserEffect laser = new();
+        [SerializeField] private ClusterEffect cluster = new();
+        [SerializeField] private MirrorEffect mirror = new();
+        [SerializeField] private LastMatchEffect lastMatch = new();
 
         #region Active Skill
 
